@@ -1,0 +1,26 @@
+/** MethodSelector样式 */
+
+.method-selector {
+  position: relative;
+}
+
+.method-select {
+  width: 100px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--bg-tertiary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--method-get);
+  transition: all 0.2s;
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+  option {
+    background: var(--bg-secondary);
+    padding: 8px;
+  }
+}

@@ -1,0 +1,176 @@
+/** HeadersEditor样式 */
+
+.headers-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+/** 预设快捷按钮 */
+.preset-headers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.preset-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.preset-btn {
+  padding: 4px 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  &:hover {
+    background: var(--bg-active);
+  }
+}
+
+/** 请求头列表 */
+.headers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: visible;
+  min-height: 0;
+  padding-bottom: 220px; // 为下拉列表留空间
+}
+
+.header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  position: relative;
+}
+
+.header-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+  margin-top: 4px;
+}
+
+/** key输入框包装 - 用于联想下拉 */
+.header-key-wrapper {
+  position: relative;
+  width: 180px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.header-key {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+}
+
+/** 联想下拉列表 */
+.header-suggestions {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  width: 300px;
+  z-index: 9999;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow-y: auto;
+  max-height: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.suggestion-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid var(--border-light);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.active, &:hover {
+    background: var(--primary-color);
+    .suggestion-key { color: #fff; }
+    .suggestion-desc { color: rgba(255,255,255,0.7); }
+  }
+}
+
+.suggestion-key {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.suggestion-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.header-value {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+}
+
+.remove-btn {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &:hover {
+    background: var(--error-color);
+    color: #fff;
+    border-color: var(--error-color);
+  }
+}
+
+/** 空状态 */
+.empty-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+/** 添加按钮 */
+.add-header-btn {
+  margin-top: 4px;
+  flex-shrink: 0;
+}

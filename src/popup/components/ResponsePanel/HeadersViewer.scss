@@ -1,0 +1,46 @@
+/** HeadersViewer样式 */
+
+.headers-viewer {
+  &.empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 24px;
+    text-align: center;
+  }
+}
+
+.headers-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-light);
+    text-align: left;
+  }
+
+  th {
+    background: var(--bg-tertiary);
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tr:hover td {
+    background: var(--bg-hover);
+  }
+
+  .header-name {
+    color: var(--primary-light);
+    font-weight: 500;
+  }
+
+  .header-value {
+    color: var(--text-primary);
+  }
+}
