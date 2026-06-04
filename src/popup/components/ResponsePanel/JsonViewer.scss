@@ -1,0 +1,24 @@
+/** JsonViewer样式 */
+
+.json-viewer {
+  &.empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 20px;
+    text-align: center;
+  }
+}
+
+.raw-content {
+  margin: 0;
+  padding: 12px;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border-radius: var(--border-radius);
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: auto;
+  max-height: 300px;
+}

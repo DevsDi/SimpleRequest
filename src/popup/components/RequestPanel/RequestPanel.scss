@@ -1,0 +1,82 @@
+/** RequestPanel样式 */
+
+.request-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+/** URL输入栏 */
+.url-bar {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.url-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transition: all 0.2s;
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+}
+
+.send-btn {
+  padding: 8px 16px;
+  font-weight: 600;
+}
+
+/** Tab切换 */
+.request-tabs {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  &.active {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+  }
+  &:hover:not(.active) {
+    background: var(--bg-hover);
+  }
+}
+
+/** Tab内容 - 填充剩余高度 */
+.request-content {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius);
+  padding: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.params-tab {
+  .hint {
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+    padding: 20px;
+  }
+}
