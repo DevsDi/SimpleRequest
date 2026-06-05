@@ -4,19 +4,22 @@ import { storageService } from '@/services';
 import RequestPanel from './components/RequestPanel';
 import ResponsePanel from './components/ResponsePanel';
 import HistoryPanel from './components/HistoryPanel';
+import VariablesPanel from './components/VariablesPanel';
 import './App.scss';
 
 /**
  * Main App component
  */
 const App: React.FC = () => {
-  const { isLoading, error, setHistory } = useStore();
+  const { isLoading, error, setHistory, variables, setVariables } = useStore();
   // Request section height
   const [requestHeight, setRequestHeight] = useState(280);
   const [isDraggingH, setIsDraggingH] = useState(false);
   // Sidebar width
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [isDraggingW, setIsDraggingW] = useState(false);
+  // Sidebar active tab
+  const [sidebarTab, setSidebarTab] = useState<'history' | 'variables'>('history');
 
   /** Initialize and load history */
   useEffect(() => {
@@ -32,6 +35,22 @@ const App: React.FC = () => {
     if (savedHeight) setRequestHeight(parseInt(savedHeight));
     if (savedWidth) setSidebarWidth(parseInt(savedWidth));
   }, [setHistory]);
+
+  /** Load variables */
+  useEffect(() => {
+    const loadVariables = async () => {
+      const vars = await storageService.getVariables();
+      setVariables(vars);
+    };
+    loadVariables();
+  }, [setVariables]);
+
+  /** Save variables when changed */
+  useEffect(() => {
+    if (variables.length > 0 || useStore.getState().variables.length === 0) {
+      storageService.setVariables(variables);
+    }
+  }, [variables]);
 
   /** Horizontal drag - request/response divider */
   const handleHMouseDown = (e: React.MouseEvent) => {
@@ -103,12 +122,31 @@ const App: React.FC = () => {
 
       {/* Main content */}
       <div className="app-main">
-        {/* Left sidebar - history */}
+        {/* Left sidebar - history/variables */}
         <aside
           className="app-sidebar"
           style={{ width: sidebarWidth, minWidth: sidebarWidth }}
         >
-          <HistoryPanel />
+          {/* Sidebar tabs */}
+          <div className="sidebar-tabs">
+            <button
+              className={`tab-btn ${sidebarTab === 'history' ? 'active' : ''}`}
+              onClick={() => setSidebarTab('history')}
+            >
+              History
+            </button>
+            <button
+              className={`tab-btn ${sidebarTab === 'variables' ? 'active' : ''}`}
+              onClick={() => setSidebarTab('variables')}
+            >
+              Variables
+            </button>
+          </div>
+          {/* Tab content */}
+          <div className="sidebar-content">
+            {sidebarTab === 'history' && <HistoryPanel />}
+            {sidebarTab === 'variables' && <VariablesPanel />}
+          </div>
         </aside>
 
         {/* Sidebar divider */}

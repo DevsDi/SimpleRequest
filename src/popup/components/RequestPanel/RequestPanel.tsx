@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '@/store';
-import { requestService, curlParser } from '@/services';
+import { requestService, curlParser, variableService } from '@/services';
 import MethodSelector from './MethodSelector';
 import HeadersEditor from './HeadersEditor';
 import BodyEditor from './BodyEditor';
@@ -16,7 +16,7 @@ type RequestTab = 'params' | 'headers' | 'body';
  * URL input, method selection, headers/body editing
  */
 const RequestPanel: React.FC = () => {
-  const { currentRequest, updateRequest, isLoading, setLoading, setError, setResponse, addHistory } = useStore();
+  const { currentRequest, updateRequest, isLoading, setLoading, setError, setResponse, addHistory, variables } = useStore();
   const [activeTab, setActiveTab] = useState<RequestTab>('headers');
 
   /** Detect pasted content for curl command */
@@ -56,23 +56,28 @@ const RequestPanel: React.FC = () => {
     setResponse(null);
 
     try {
+      // 处理变量替换
+      const processedRequest = variableService.processRequest(currentRequest, variables);
+
+      // 智能添加协议
+      processedRequest.url = variableService.normalizeUrl(processedRequest.url);
+
       // Update request name
       const request = {
-        ...currentRequest,
-        name: currentRequest.url.split('?')[0].slice(-50),
+        ...processedRequest,
+        name: processedRequest.url.split('?')[0].slice(-50),
         updatedAt: Date.now(),
       };
-      updateRequest(request);
 
       // Send request
       const response = await requestService.execute(request);
       setResponse(response);
 
-      // Save to history
-      await requestService.saveToHistory(request, response);
+      // Save to history (使用原始请求，保留变量引用)
+      await requestService.saveToHistory(currentRequest, response);
       addHistory({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        request,
+        request: currentRequest,
         response,
         timestamp: Date.now(),
       });
