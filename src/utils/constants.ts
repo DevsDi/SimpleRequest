@@ -13,6 +13,12 @@ export const MAX_RESPONSE_SIZE = 2 * 1024 * 1024;
 /** 默认超时时间 30秒 */
 export const DEFAULT_TIMEOUT = 30000;
 
+/** 变量语法正则 - 匹配 {{变量名}} */
+export const VARIABLE_REGEX = /\{\{([^}]+)\}\}/g;
+
+/** 智能判断使用 http 协议的域名前缀 */
+export const HTTP_DOMAIN_PREFIXES = ['localhost', '127.0.0.1', '192.168.'];
+
 /** HTTP方法列表 */
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'] as const;
 

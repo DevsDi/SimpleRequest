@@ -1,4 +1,4 @@
-import { HistoryEntry, ExportData } from '@/types';
+import { HistoryEntry, ExportData, Variable } from '@/types';
 
 /**
  * 存储服务
@@ -56,6 +56,23 @@ class StorageService {
     } catch {
       throw new Error('导入数据格式无效');
     }
+  }
+
+  /**
+   * 获取变量列表
+   * @returns 变量列表
+   */
+  async getVariables(): Promise<Variable[]> {
+    const { variables } = await chrome.storage.local.get({ variables: [] });
+    return variables;
+  }
+
+  /**
+   * 设置变量列表
+   * @param variables 变量列表
+   */
+  async setVariables(variables: Variable[]): Promise<void> {
+    await chrome.storage.local.set({ variables });
   }
 }
 

@@ -4,6 +4,18 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 
 /**
+ * 变量定义
+ */
+export interface Variable {
+  /** 变量名称 */
+  name: string;
+  /** 变量值 */
+  value: string;
+  /** 是否启用 */
+  enabled: boolean;
+}
+
+/**
  * 请求头项
  */
 export interface Header {

@@ -1,0 +1,234 @@
+.variables-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px;
+  background: var(--bg-secondary);
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+
+    h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .count {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  }
+
+  .add-variable {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 8px;
+      font-size: 11px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+
+      &:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+
+      &::placeholder {
+        color: var(--text-muted);
+      }
+    }
+
+    .var-name-input {
+      flex: 0.4;
+    }
+
+    .var-value-input {
+      flex: 0.6;
+    }
+
+    .btn-add {
+      padding: 6px 10px;
+      font-size: 14px;
+      font-weight: bold;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      &:hover:not(:disabled) {
+        background: var(--primary-hover);
+      }
+    }
+  }
+
+  .variables-list {
+    flex: 1;
+    overflow-y: auto;
+
+    .empty-hint {
+      padding: 16px;
+      text-align: center;
+      color: var(--text-muted);
+
+      p {
+        margin: 0;
+        font-size: 12px;
+      }
+
+      .tip {
+        margin-top: 8px;
+        font-size: 11px;
+        opacity: 0.7;
+      }
+    }
+
+    .variable-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      background: var(--bg-primary);
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+
+      &.disabled {
+        opacity: 0.5;
+
+        .var-name,
+        .var-value {
+          color: var(--text-muted);
+        }
+      }
+
+      &.editing {
+        background: var(--bg-tertiary);
+        border-color: var(--primary-color);
+
+        input {
+          flex: 1;
+          min-width: 0;
+          padding: 4px 6px;
+          font-size: 11px;
+          border: 1px solid var(--border-color);
+          border-radius: 3px;
+          background: var(--bg-primary);
+          color: var(--text-primary);
+
+          &:focus {
+            outline: none;
+            border-color: var(--primary-color);
+          }
+        }
+
+        .edit-name {
+          flex: 0.4;
+        }
+
+        .edit-value {
+          flex: 0.6;
+        }
+
+        .btn-save,
+        .btn-cancel {
+          padding: 4px 8px;
+          font-size: 12px;
+          border: none;
+          border-radius: 3px;
+          cursor: pointer;
+        }
+
+        .btn-save {
+          background: var(--primary-color);
+          color: white;
+
+          &:hover {
+            background: var(--primary-hover);
+          }
+        }
+
+        .btn-cancel {
+          background: var(--bg-secondary);
+          color: var(--text-primary);
+
+          &:hover {
+            background: var(--bg-tertiary);
+          }
+        }
+      }
+
+      .var-toggle {
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+      }
+
+      .var-name {
+        flex: 0.4;
+        min-width: 0;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .var-value {
+        flex: 0.6;
+        min-width: 0;
+        font-size: 11px;
+        color: var(--text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .btn-edit,
+      .btn-delete {
+        padding: 2px 6px;
+        font-size: 12px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        opacity: 0.6;
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+
+      .btn-edit {
+        background: transparent;
+        color: var(--text-secondary);
+      }
+
+      .btn-delete {
+        background: transparent;
+        color: var(--danger-color);
+      }
+    }
+  }
+}

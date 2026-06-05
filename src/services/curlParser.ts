@@ -115,33 +115,95 @@ class CurlParser {
 
   /**
    * 清理命令
+   * 只移除 curl 续行的反斜杠，保留 JSON 内容中的转义字符
    */
   private normalizeCommand(cmd: string): string {
-    // 移除反斜杠换行
-    return cmd.replace(/\\\s*\n/g, ' ').replace(/\\\s*/g, '').trim();
+    // 移除反斜杠+换行（curl续行符）
+    // 移除行尾的反斜杠
+    return cmd.replace(/\\\n/g, ' ').replace(/\\(\s*)$/gm, '').trim();
   }
 
   /**
-   * 分词(处理引号)
+   * 分词(处理引号，包括 ANSI-C quoting $'...' 格式)
    */
   private tokenize(cmd: string): string[] {
     const tokens: string[] = [];
     let current = '';
     let inQuote = false;
     let quoteChar = '';
+    let isAnsiCQuoting = false; // $'...' 格式
 
     for (let i = 0; i < cmd.length; i++) {
       const char = cmd[i];
 
-      if (!inQuote && (char === '"' || char === "'")) {
+      // 检测 ANSI-C quoting: $'...'
+      if (!inQuote && char === '$' && cmd[i + 1] === "'") {
         inQuote = true;
-        quoteChar = char;
+        quoteChar = "'";
+        isAnsiCQuoting = true;
+        i++; // 跳过 $
         continue;
       }
 
-      if (inQuote && char === quoteChar) {
+      if (!inQuote && (char === '"' || char === "'")) {
+        inQuote = true;
+        quoteChar = char;
+        isAnsiCQuoting = false;
+        continue;
+      }
+
+      if (inQuote && char === '\\' && isAnsiCQuoting) {
+        // ANSI-C quoting 转义处理
+        const nextChar = cmd[i + 1];
+        if (nextChar === "'") {
+          // \' -> '
+          current += "'";
+          i++;
+          continue;
+        } else if (nextChar === 'u' && cmd.slice(i + 2, i + 6).match(/[0-9a-fA-F]{4}/)) {
+          // \uXXXX -> Unicode 字符
+          const hex = cmd.slice(i + 2, i + 6);
+          current += String.fromCharCode(parseInt(hex, 16));
+          i += 5; // 跳过 \uXXXX
+          continue;
+        } else if (nextChar === 'n') {
+          // \n -> 换行
+          current += '\n';
+          i++;
+          continue;
+        } else if (nextChar === 't') {
+          // \t -> 制表符
+          current += '\t';
+          i++;
+          continue;
+        } else if (nextChar === 'r') {
+          // \r -> 回车
+          current += '\r';
+          i++;
+          continue;
+        } else if (nextChar === '\\') {
+          // \\ -> \
+          current += '\\';
+          i++;
+          continue;
+        }
+        // 其他情况保留反斜杠
+        current += char;
+        continue;
+      }
+
+      if (inQuote && char === quoteChar && !isAnsiCQuoting) {
+        // 普通引号结束（非 ANSI-C quoting）
         inQuote = false;
         quoteChar = '';
+        continue;
+      }
+
+      // ANSI-C quoting 中单引号需要转义才能出现，所以直接遇到的单引号就是结束
+      if (inQuote && isAnsiCQuoting && char === "'") {
+        inQuote = false;
+        quoteChar = '';
+        isAnsiCQuoting = false;
         continue;
       }
 

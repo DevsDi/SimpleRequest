@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { HttpRequest, HttpResponse, HistoryEntry } from '@/types';
+import { HttpRequest, HttpResponse, HistoryEntry, Variable } from '@/types';
 import { DEFAULT_REQUEST } from '@/utils/constants';
 
 /**
@@ -16,6 +16,8 @@ interface AppState {
   error: string | null;
   /** 历史记录列表 */
   history: HistoryEntry[];
+  /** 变量列表 */
+  variables: Variable[];
 
   /** 设置当前请求 */
   setCurrentRequest: (request: HttpRequest) => void;
@@ -33,6 +35,8 @@ interface AppState {
   addHistory: (entry: HistoryEntry) => void;
   /** 清空历史记录 */
   clearHistory: () => void;
+  /** 设置变量 */
+  setVariables: (variables: Variable[]) => void;
   /** 重置状态 */
   reset: () => void;
 }
@@ -46,6 +50,7 @@ export const useStore = create<AppState>((set) => ({
   isLoading: false,
   error: null,
   history: [],
+  variables: [],
 
   setCurrentRequest: (request) => set({ currentRequest: request }),
 
@@ -73,6 +78,8 @@ export const useStore = create<AppState>((set) => ({
     }),
 
   clearHistory: () => set({ history: [] }),
+
+  setVariables: (variables) => set({ variables }),
 
   reset: () =>
     set({
