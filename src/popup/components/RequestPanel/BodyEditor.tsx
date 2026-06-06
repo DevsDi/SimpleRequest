@@ -3,6 +3,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useStore } from '@/store';
 import { BODY_TYPES, BodyType } from '@/utils/constants';
+import FormdataEditor from './FormdataEditor';
 import './BodyEditor.scss';
 
 /** Generate unique ID for collapsible blocks */
@@ -307,14 +308,17 @@ const BodyEditor: React.FC = () => {
                 />
               </div>
             )
+          ) : body.type === 'form-data' || body.type === 'x-www-form-urlencoded' ? (
+            /* Form-data / urlencoded: key-value editor */
+            <FormdataEditor
+              value={body.content}
+              onChange={(value) => updateRequest({ body: { ...body, content: value } })}
+            />
           ) : (
+            /* Raw: simple textarea */
             <textarea
               className="body-textarea"
-              placeholder={
-                body.type === 'form-data'
-                  ? 'Enter form data...'
-                  : 'Enter raw data...'
-              }
+              placeholder="Enter raw data..."
               value={body.content}
               onChange={handleContentChange}
             />
@@ -325,6 +329,11 @@ const BodyEditor: React.FC = () => {
               {isViewMode
                 ? 'Tip: Click ▼/▶ to collapse, click content to edit'
                 : 'Tip: Press Tab to indent, Format JSON for collapsible view'}
+            </div>
+          )}
+          {(body.type === 'form-data' || body.type === 'x-www-form-urlencoded') && (
+            <div className="body-hint">
+              Tip: Add key-value pairs, they will be formatted automatically when sending
             </div>
           )}
         </div>
