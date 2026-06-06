@@ -4,6 +4,7 @@ import { requestService, curlParser, variableService } from '@/services';
 import MethodSelector from './MethodSelector';
 import HeadersEditor from './HeadersEditor';
 import BodyEditor from './BodyEditor';
+import ParamsEditor from './ParamsEditor';
 import './RequestPanel.scss';
 
 /**
@@ -148,11 +149,7 @@ const RequestPanel: React.FC = () => {
 
       {/* Tab content */}
       <div className="request-content">
-        {activeTab === 'params' && (
-          <div className="params-tab">
-            <p className="hint">URL params are parsed automatically</p>
-          </div>
-        )}
+        {activeTab === 'params' && <ParamsEditor />}
         {activeTab === 'headers' && <HeadersEditor />}
         {activeTab === 'body' && <BodyEditor />}
       </div>
