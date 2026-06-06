@@ -5,6 +5,7 @@ import RequestPanel from './components/RequestPanel';
 import ResponsePanel from './components/ResponsePanel';
 import HistoryPanel from './components/HistoryPanel';
 import VariablesPanel from './components/VariablesPanel';
+import DonateModal from './components/DonateModal';
 import './App.scss';
 
 /**
@@ -16,10 +17,12 @@ const App: React.FC = () => {
   const [requestHeight, setRequestHeight] = useState(280);
   const [isDraggingH, setIsDraggingH] = useState(false);
   // Sidebar width
-  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [sidebarWidth, setSidebarWidth] = useState(300);
   const [isDraggingW, setIsDraggingW] = useState(false);
   // Sidebar active tab
   const [sidebarTab, setSidebarTab] = useState<'history' | 'variables'>('history');
+  // Donate modal
+  const [showDonate, setShowDonate] = useState(false);
 
   /** Initialize and load history */
   useEffect(() => {
@@ -95,7 +98,7 @@ const App: React.FC = () => {
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = e.clientX;
-      if (newWidth >= 150 && newWidth <= 400) {
+      if (newWidth >= 150 && newWidth <= 500) {
         setSidebarWidth(newWidth);
       }
     };
@@ -117,7 +120,16 @@ const App: React.FC = () => {
     <div className="app">
       {/* Header */}
       <header className="app-header">
-        <h1 className="app-title">SimpleRequest</h1>
+        <div className="header-left">
+          <h1 className="app-title">SimpleRequest</h1>
+          <button
+            className="donate-header-btn"
+            onClick={() => setShowDonate(true)}
+            title="Support this project"
+          >
+            ☕
+          </button>
+        </div>
       </header>
 
       {/* Main content */}
@@ -180,6 +192,9 @@ const App: React.FC = () => {
           </section>
         </main>
       </div>
+
+      {/* Donate Modal */}
+      <DonateModal isOpen={showDonate} onClose={() => setShowDonate(false)} />
     </div>
   );
 };

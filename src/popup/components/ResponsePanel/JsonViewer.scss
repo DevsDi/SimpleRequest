@@ -1,6 +1,10 @@
-/** JsonViewer样式 */
+/** JsonViewer styles */
 
 .json-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
   &.empty {
     color: var(--text-muted);
     font-size: 13px;
@@ -9,16 +13,119 @@
   }
 }
 
+.json-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  flex-shrink: 0;
+}
+
+.json-action-btn {
+  padding: 4px 10px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--bg-active);
+    color: var(--text-primary);
+  }
+}
+
+.json-content {
+  flex: 1;
+  padding: 12px;
+  background: #1e1e2e;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  /* Syntax highlighting */
+  .v-key {
+    color: #9cdcfe;
+  }
+
+  .v-string {
+    color: #ce9178;
+  }
+
+  .v-number {
+    color: #b5cea8;
+  }
+
+  .v-bool {
+    color: #569cd6;
+  }
+
+  .v-null {
+    color: #569cd6;
+    font-style: italic;
+  }
+
+  .v-bracket {
+    color: #ffd700;
+    font-weight: bold;
+  }
+
+  .v-comma {
+    color: var(--text-primary);
+  }
+
+  .v-count {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-left: 4px;
+  }
+
+  /* Toggle button */
+  .toggle {
+    cursor: pointer;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-right: 4px;
+    user-select: none;
+
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+
+  /* Block container */
+  .block {
+    padding-left: 16px;
+    border-left: 1px dashed #444;
+    margin-left: 6px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+
+    &.hide {
+      display: none;
+    }
+  }
+
+  .line {
+    display: block;
+  }
+}
+
 .raw-content {
   margin: 0;
   padding: 12px;
   background: #1e1e1e;
   color: #d4d4d4;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 13px;
   white-space: pre-wrap;
   word-break: break-all;
   overflow: auto;
-  max-height: 300px;
+  flex: 1;
 }

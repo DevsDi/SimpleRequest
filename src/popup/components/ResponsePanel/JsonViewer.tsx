@@ -1,10 +1,8 @@
-import React, { useMemo } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import React, { useMemo, useState, useCallback } from 'react';
 import './JsonViewer.scss';
 
 /**
- * JSON viewer component
+ * JSON viewer component with collapse/expand functionality
  * Formats and highlights JSON response
  */
 interface JsonViewerProps {
@@ -12,7 +10,13 @@ interface JsonViewerProps {
   content: string;
 }
 
+/** Generate unique ID */
+let idCounter = 0;
+const generateId = () => `json-block-${idCounter++}`;
+
 const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+
   /** Parse and format JSON */
   const formattedContent = useMemo(() => {
     if (!content.trim()) return '';
@@ -20,7 +24,6 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
       const parsed = JSON.parse(content);
       return JSON.stringify(parsed, null, 2);
     } catch {
-      // Not JSON format, return raw content
       return content;
     }
   }, [content]);
@@ -36,28 +39,140 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
     }
   }, [content]);
 
+  /** Toggle block collapse */
+  const toggleBlock = useCallback((id: string) => {
+    setCollapsedBlocks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  /** Expand all */
+  const expandAll = useCallback(() => {
+    setCollapsedBlocks(new Set());
+  }, []);
+
+  /** Collapse all */
+  const collapseAll = useCallback(() => {
+    // Find all block IDs
+    const allIds = new Set<string>();
+    const regex = /data-block-id="([^"]+)"/g;
+    let match;
+    while ((match = regex.exec(renderedJson)) !== null) {
+      allIds.add(match[1]);
+    }
+    setCollapsedBlocks(allIds);
+  }, []);
+
+  /** Escape HTML */
+  const escapeHtml = (str: string): string => {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  };
+
+  /** Render JSON with highlighting and collapse markers */
+  const renderJson = (data: unknown, depth = 0): string => {
+    const id = generateId();
+
+    if (data === null) {
+      return '<span class="v-null">null</span>';
+    }
+
+    if (data === true || data === false) {
+      return `<span class="v-bool">${data}</span>`;
+    }
+
+    if (typeof data === 'number') {
+      return `<span class="v-number">${data}</span>`;
+    }
+
+    if (typeof data === 'string') {
+      return `<span class="v-string">"${escapeHtml(data)}"</span>`;
+    }
+
+    if (Array.isArray(data)) {
+      if (data.length === 0) {
+        return '<span class="v-bracket">[]</span>';
+      }
+      const items = data.map((item, i) => {
+        const val = renderJson(item, depth + 1);
+        const comma = i < data.length - 1 ? '<span class="v-comma">,</span>' : '';
+        return `<div class="line">${val}${comma}</div>`;
+      }).join('');
+      const isCollapsed = collapsedBlocks.has(id);
+      return `<span class="toggle" data-block-id="${id}">${isCollapsed ? '▶' : '▼'}</span><span class="v-bracket">[</span><span class="v-count">${data.length}</span><div class="block ${isCollapsed ? 'hide' : ''}" data-block-id="${id}">${items}</div><span class="v-bracket">]</span>`;
+    }
+
+    if (typeof data === 'object') {
+      const keys = Object.keys(data);
+      if (keys.length === 0) {
+        return '<span class="v-bracket">{}</span>';
+      }
+      const items = keys.map((k, i) => {
+        const val = renderJson(data[k as keyof typeof data], depth + 1);
+        const comma = i < keys.length - 1 ? '<span class="v-comma">,</span>' : '';
+        return `<div class="line"><span class="v-key">"${escapeHtml(k)}"</span>: ${val}${comma}</div>`;
+      }).join('');
+      const isCollapsed = collapsedBlocks.has(id);
+      return `<span class="toggle" data-block-id="${id}">${isCollapsed ? '▶' : '▼'}</span><span class="v-bracket">{</span><span class="v-count">${keys.length}</span><div class="block ${isCollapsed ? 'hide' : ''}" data-block-id="${id}">${items}</div><span class="v-bracket">}</span>`;
+    }
+
+    return String(data);
+  };
+
+  /** Rendered JSON HTML */
+  const renderedJson = useMemo(() => {
+    if (!isJson || !content.trim()) return '';
+    try {
+      idCounter = 0; // Reset counter for each render
+      const parsed = JSON.parse(content);
+      return renderJson(parsed);
+    } catch {
+      return '';
+    }
+  }, [content, isJson, collapsedBlocks]);
+
+  /** Handle click on toggle */
+  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('toggle')) {
+      const blockId = target.getAttribute('data-block-id');
+      if (blockId) {
+        toggleBlock(blockId);
+      }
+    }
+  }, [toggleBlock]);
+
   if (!content.trim()) {
     return <div className="json-viewer empty">Empty response body</div>;
   }
 
   return (
     <div className="json-viewer">
+      {isJson && (
+        <div className="json-actions">
+          <button className="json-action-btn" onClick={expandAll}>
+            Expand All
+          </button>
+          <button className="json-action-btn" onClick={collapseAll}>
+            Collapse All
+          </button>
+        </div>
+      )}
       {isJson ? (
-        <SyntaxHighlighter
-          language="json"
-          style={vscDarkPlus}
-          customStyle={{
-            margin: 0,
-            padding: '10px',
-            borderRadius: '4px',
-            fontSize: '13px',
-            maxHeight: 'none',
-            overflow: 'auto',
-            background: '#1e1e2e',
-          }}
-        >
-          {formattedContent}
-        </SyntaxHighlighter>
+        <div
+          className="json-content"
+          onClick={handleClick}
+          dangerouslySetInnerHTML={{ __html: renderedJson }}
+        />
       ) : (
         <pre className="raw-content">{content}</pre>
       )}
