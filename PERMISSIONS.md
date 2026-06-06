@@ -117,5 +117,5 @@ Users can control permissions via:
 ---
 
 For permission-related questions:
-- GitHub: https://github.com/simple-request
-- Email: privacy@simple-request.example.com
+- GitHub: https://github.com/DevsDi/SimpleRequest
+- Email: Open an issue on GitHub
