@@ -4,16 +4,18 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useStore } from '@/store';
 import { BODY_TYPES, BodyType } from '@/utils/constants';
 import FormdataEditor from './FormdataEditor';
-import RawEditor from './RawEditor';
 import './BodyEditor.scss';
 
 /** Generate unique ID for collapsible blocks */
 let idCounter = 0;
 const generateId = () => `body-block-${idCounter++}`;
 
+/** Raw content type - Postman style */
+type RawContentType = 'json' | 'text' | 'xml' | 'html' | 'javascript';
+
 /**
  * Body editor component - Postman style
- * Supports: none, form-data, x-www-form-urlencoded, raw, json
+ * Supports: none, form-data, x-www-form-urlencoded, raw
  */
 const BodyEditor: React.FC = () => {
   const { currentRequest, updateRequest } = useStore();
@@ -21,7 +23,8 @@ const BodyEditor: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
 
-  /** View mode for JSON */
+  /** Raw subtype */
+  const [rawType, setRawType] = useState<RawContentType>('json');
   const [isViewMode, setIsViewMode] = useState(false);
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
 
@@ -89,9 +92,9 @@ const BodyEditor: React.FC = () => {
     } catch {}
   }, [body.content]);
 
-  const collectIds = (data: unknown): string[] => {
+  const collectIds = (data: unknown) => {
     const ids: string[] = [];
-    const traverse = (obj: unknown): void => {
+    const traverse = (obj: unknown) => {
       if (Array.isArray(obj) && obj.length > 0) {
         ids.push(generateId());
         obj.forEach(traverse);
@@ -105,7 +108,6 @@ const BodyEditor: React.FC = () => {
     };
     traverse(data);
     setCollapsedBlocks(new Set(ids));
-    return ids;
   };
 
   /** Escape HTML */
@@ -161,6 +163,17 @@ const BodyEditor: React.FC = () => {
     }
   }, [toggleBlock]);
 
+  /** Language for highlighter */
+  const getLanguage = () => {
+    switch (rawType) {
+      case 'json': return 'json';
+      case 'xml': return 'xml';
+      case 'html': return 'html';
+      case 'javascript': return 'javascript';
+      default: return 'text';
+    }
+  };
+
   return (
     <div className="body-editor">
       {/* Type selector - Postman style */}
@@ -171,10 +184,7 @@ const BodyEditor: React.FC = () => {
             className={`type-tab ${body.type === type ? 'active' : ''}`}
             onClick={() => handleTypeChange(type)}
           >
-            {type === 'none' ? 'None' :
-             type === 'form-data' ? 'form-data' :
-             type === 'x-www-form-urlencoded' ? 'x-www-form-urlencoded' :
-             type === 'raw' ? 'raw' : 'JSON'}
+            {type === 'none' ? 'none' : type}
           </button>
         ))}
       </div>
@@ -186,20 +196,47 @@ const BodyEditor: React.FC = () => {
           <div className="none-hint">This request does not have a body</div>
         )}
 
-        {/* JSON */}
-        {body.type === 'json' && (
+        {/* form-data & x-www-form-urlencoded */}
+        {(body.type === 'form-data' || body.type === 'x-www-form-urlencoded') && (
+          <FormdataEditor
+            value={body.content}
+            onChange={(v) => updateRequest({ body: { ...body, content: v } })}
+            type={body.type}
+          />
+        )}
+
+        {/* raw - includes JSON as subtype */}
+        {body.type === 'raw' && (
           <>
-            <div className="json-toolbar">
-              <button className="toolbar-btn" onClick={formatJson}>Beautify</button>
-              {isViewMode && (
-                <>
-                  <button className="toolbar-btn" onClick={expandAll}>Expand All</button>
-                  <button className="toolbar-btn" onClick={collapseAll}>Collapse All</button>
-                </>
+            {/* Raw type selector + JSON toolbar */}
+            <div className="raw-toolbar">
+              <div className="raw-type-selector">
+                {(['json', 'text', 'xml', 'html', 'javascript'] as RawContentType[]).map((t) => (
+                  <button
+                    key={t}
+                    className={`type-btn ${rawType === t ? 'active' : ''}`}
+                    onClick={() => { setRawType(t); setIsViewMode(false); }}
+                  >
+                    {t === 'json' ? 'JSON' : t === 'text' ? 'Text' : t === 'xml' ? 'XML' : t === 'html' ? 'HTML' : 'JavaScript'}
+                  </button>
+                ))}
+              </div>
+              {rawType === 'json' && (
+                <div className="json-actions">
+                  <button className="toolbar-btn" onClick={formatJson}>Beautify</button>
+                  {isViewMode && (
+                    <>
+                      <button className="toolbar-btn" onClick={expandAll}>Expand All</button>
+                      <button className="toolbar-btn" onClick={collapseAll}>Collapse All</button>
+                    </>
+                  )}
+                  {!isValidJson && body.content.trim() && <span className="error-hint">Invalid JSON</span>}
+                </div>
               )}
-              {!isValidJson && body.content.trim() && <span className="error-hint">Invalid JSON</span>}
             </div>
-            {isViewMode ? (
+
+            {/* JSON view mode with collapse */}
+            {rawType === 'json' && isViewMode && isValidJson ? (
               <div className="json-view-container" onClick={handleViewClick}>
                 <div className="json-view-content">
                   <div dangerouslySetInnerHTML={{ __html: renderedJson }} />
@@ -207,26 +244,37 @@ const BodyEditor: React.FC = () => {
                 <div className="json-view-hint">Click to edit</div>
               </div>
             ) : (
-              <div className="json-editor-container">
-                <pre className="json-highlight-layer" ref={highlightRef}>
-                  <SyntaxHighlighter language="json" style={vscDarkPlus} customStyle={{ margin: 0, padding: '0', fontSize: '13px', lineHeight: '1.5', background: 'transparent', fontFamily: 'JetBrains Mono, Monaco, monospace' }} codeTagProps={{ style: { fontFamily: 'JetBrains Mono, Monaco, monospace' } }}>
+              /* Edit mode with syntax highlight */
+              <div className="raw-editor-container">
+                <pre className="raw-highlight-layer" ref={highlightRef}>
+                  <SyntaxHighlighter
+                    language={getLanguage()}
+                    style={vscDarkPlus}
+                    customStyle={{
+                      margin: 0,
+                      padding: '0',
+                      fontSize: '13px',
+                      lineHeight: '1.5',
+                      background: 'transparent',
+                      fontFamily: 'JetBrains Mono, Monaco, monospace',
+                    }}
+                    codeTagProps={{ style: { fontFamily: 'JetBrains Mono, Monaco, monospace' } }}
+                  >
                     {body.content || ' '}
                   </SyntaxHighlighter>
                 </pre>
-                <textarea ref={textareaRef} className="json-textarea" placeholder="Enter JSON..." value={body.content} onChange={handleContentChange} onScroll={handleScroll} spellCheck={false} />
+                <textarea
+                  ref={textareaRef}
+                  className="raw-textarea"
+                  placeholder={rawType === 'json' ? 'Enter JSON...' : 'Enter content...'}
+                  value={body.content}
+                  onChange={handleContentChange}
+                  onScroll={handleScroll}
+                  spellCheck={false}
+                />
               </div>
             )}
           </>
-        )}
-
-        {/* form-data & x-www-form-urlencoded */}
-        {(body.type === 'form-data' || body.type === 'x-www-form-urlencoded') && (
-          <FormdataEditor value={body.content} onChange={(v) => updateRequest({ body: { ...body, content: v } })} type={body.type} />
-        )}
-
-        {/* raw */}
-        {body.type === 'raw' && (
-          <RawEditor value={body.content} onChange={(v) => updateRequest({ body: { ...body, content: v } })} />
         )}
       </div>
     </div>
