@@ -41,6 +41,7 @@
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  align-items: center;
 }
 
 .tab-btn {
@@ -62,6 +63,34 @@
   }
 }
 
+.tab-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.action-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  &.active {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+  }
+}
+
 /** 响应内容 - 填充剩余空间 */
 .response-content {
   flex: 1;
@@ -71,4 +100,16 @@
   padding: 10px;
   overflow: auto;
   border: 1px solid var(--border-light);
+}
+
+/** Raw body display */
+.raw-body {
+  margin: 0;
+  padding: 0;
+  font-family: 'JetBrains Mono', 'Monaco', monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
 }

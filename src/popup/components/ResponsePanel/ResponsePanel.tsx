@@ -17,6 +17,26 @@ type ResponseTab = 'body' | 'headers';
 const ResponsePanel: React.FC = () => {
   const { response } = useStore();
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
+  const [showRaw, setShowRaw] = useState(false);
+
+  /** Copy response body */
+  const handleCopyBody = async () => {
+    if (!response) return;
+    try {
+      await navigator.clipboard.writeText(response.body);
+    } catch {}
+  };
+
+  /** Copy all headers */
+  const handleCopyHeaders = async () => {
+    if (!response) return;
+    const headerText = Object.entries(response.headers)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('\n');
+    try {
+      await navigator.clipboard.writeText(headerText);
+    } catch {}
+  };
 
   if (!response) {
     return (
@@ -33,6 +53,16 @@ const ResponsePanel: React.FC = () => {
     if (status >= 400 && status < 500) return '#f59e0b';
     if (status >= 500) return '#ef4444';
     return '#cdd6f4';
+  };
+
+  /** Check if JSON */
+  const isJson = (): boolean => {
+    try {
+      JSON.parse(response.body);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   return (
@@ -60,11 +90,40 @@ const ResponsePanel: React.FC = () => {
         >
           Headers
         </button>
+        <div className="tab-actions">
+          {activeTab === 'body' && (
+            <>
+              {isJson() && (
+                <button
+                  className={`action-btn ${showRaw ? 'active' : ''}`}
+                  onClick={() => setShowRaw(!showRaw)}
+                  title="Toggle raw view"
+                >
+                  Raw
+                </button>
+              )}
+              <button className="action-btn" onClick={handleCopyBody} title="Copy body">
+                Copy
+              </button>
+            </>
+          )}
+          {activeTab === 'headers' && (
+            <button className="action-btn" onClick={handleCopyHeaders} title="Copy headers">
+              Copy
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tab content */}
       <div className="response-content">
-        {activeTab === 'body' && <JsonViewer content={response.body} />}
+        {activeTab === 'body' && (
+          showRaw ? (
+            <pre className="raw-body">{response.body}</pre>
+          ) : (
+            <JsonViewer content={response.body} />
+          )
+        )}
         {activeTab === 'headers' && <HeadersViewer headers={response.headers} />}
       </div>
     </div>
