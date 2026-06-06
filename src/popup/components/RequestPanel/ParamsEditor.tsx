@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useStore } from '@/store';
 import './ParamsEditor.scss';
 
@@ -31,7 +31,9 @@ const ParamsEditor: React.FC = () => {
     if (!query) return [];
 
     return query.split('&').map((pair) => {
-      const [key, value] = pair.split('=').map((s) => decodeURIComponent(s || ''));
+      const [key, value] = pair.split('=').map((s) => {
+        try { return decodeURIComponent(s || ''); } catch { return s || ''; }
+      });
       return { key, value, enabled: true };
     });
   };
@@ -39,13 +41,17 @@ const ParamsEditor: React.FC = () => {
   /** Independent params state */
   const [params, setParams] = useState<ParamItem[]>(() => parseParamsFromUrl(currentRequest.url));
 
-  /** Sync params when URL changes from outside (e.g. paste curl) */
+  /** Keep a ref to params to avoid stale closure in useEffect */
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+
+  /** Sync params when URL changes from outside (e.g. paste curl, user edits URL bar) */
   useEffect(() => {
     const parsed = parseParamsFromUrl(currentRequest.url);
-    // Only sync if URL has query and params differ significantly
-    const currentQuery = params.filter(p => p.key.trim()).map(p => `${p.key}=${p.value}`).join('&');
+    const currentQuery = paramsRef.current.filter(p => p.key.trim()).map(p => `${p.key}=${p.value}`).join('&');
     const newQuery = parsed.map(p => `${p.key}=${p.value}`).join('&');
-    if (currentQuery !== newQuery && currentRequest.url.includes('?')) {
+    // Sync when queries differ (including when URL query is removed -> parsed becomes empty)
+    if (currentQuery !== newQuery) {
       setParams(parsed);
     }
   }, [currentRequest.url]);

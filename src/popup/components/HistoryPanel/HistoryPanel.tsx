@@ -7,17 +7,26 @@ import './HistoryPanel.scss';
 
 /**
  * History panel component
- * Shows request history list, click to reload
+ * Shows request history list, click to reload, delete single or clear all
  */
 const HistoryPanel: React.FC = () => {
-  const { history, setCurrentRequest, clearHistory } = useStore();
+  const { history, setCurrentRequest, removeHistory, clearHistory } = useStore();
 
   /** Click history item to load into current request */
   const handleItemClick = (entry: HistoryEntry) => {
     setCurrentRequest(entry.request);
   };
 
-  /** Clear history */
+  /** Delete single history entry */
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Prevent triggering item click
+    removeHistory(id);
+    // Also remove from persistent storage
+    const updated = history.filter((entry) => entry.id !== id);
+    await storageService.setHistory(updated);
+  };
+
+  /** Clear all history */
   const handleClear = async () => {
     await storageService.clearHistory();
     clearHistory();
@@ -80,6 +89,13 @@ const HistoryPanel: React.FC = () => {
                 {entry.response.status}
               </div>
             )}
+            <button
+              className="item-delete-btn"
+              onClick={(e) => handleDelete(e, entry.id)}
+              title="Delete"
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>

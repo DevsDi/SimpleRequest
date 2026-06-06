@@ -1,17 +1,15 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useStore } from '@/store';
 import { BODY_TYPES, BodyType } from '@/utils/constants';
+import { RawContentType } from '@/types';
 import FormdataEditor from './FormdataEditor';
 import './BodyEditor.scss';
 
 /** Generate unique ID for collapsible blocks */
 let idCounter = 0;
 const generateId = () => `body-block-${idCounter++}`;
-
-/** Raw content type - Postman style */
-type RawContentType = 'json' | 'text' | 'xml' | 'html' | 'javascript';
 
 /**
  * Body editor component - Postman style
@@ -23,14 +21,44 @@ const BodyEditor: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
 
-  /** Raw subtype */
-  const [rawType, setRawType] = useState<RawContentType>('json');
+  /** Raw subtype - synced with body.rawType */
+  const [rawType, setRawType] = useState<RawContentType>(body.rawType || 'json');
   const [isViewMode, setIsViewMode] = useState(false);
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
 
-  /** Handle type change */
+  /** Per-type content storage - each body type keeps its own content */
+  const contentStore = useRef<Record<string, string>>({
+    'form-data': '',
+    'x-www-form-urlencoded': '',
+    'raw': '',
+  });
+
+  /** Keep contentStore synced when body type or content changes externally (e.g. history load) */
+  const lastBodyTypeRef = useRef(body.type);
+  useEffect(() => {
+    // Only update contentStore when body type changes (not on every keystroke)
+    if (body.type !== lastBodyTypeRef.current) {
+      lastBodyTypeRef.current = body.type;
+      if (body.type !== 'none') {
+        contentStore.current[body.type] = body.content;
+      }
+      // Also sync rawType when loading from history
+      if (body.rawType) {
+        setRawType(body.rawType);
+      }
+    }
+  }, [body.type, body.content]);
+
+  /** Handle type change - save current content, load new type's content */
   const handleTypeChange = (type: BodyType) => {
-    updateRequest({ body: { ...body, type } });
+    // Save current content before switching
+    if (body.type !== 'none') {
+      contentStore.current[body.type] = body.content;
+    }
+    // Load saved content for the new type (or empty if none)
+    const savedContent = type !== 'none' ? (contentStore.current[type] ?? '') : '';
+    const newRawType = type === 'raw' ? rawType : undefined;
+    updateRequest({ body: { type, content: savedContent, rawType: newRawType } });
     setIsViewMode(false);
     setCollapsedBlocks(new Set());
   };
@@ -87,28 +115,24 @@ const BodyEditor: React.FC = () => {
     if (!body.content.trim()) return;
     try {
       idCounter = 0;
+      const allIds: string[] = [];
+      const collectIds = (data: unknown) => {
+        if (Array.isArray(data) && data.length > 0) {
+          allIds.push(generateId());
+          data.forEach(collectIds);
+        } else if (data && typeof data === 'object') {
+          const keys = Object.keys(data);
+          if (keys.length > 0) {
+            allIds.push(generateId());
+            keys.forEach(k => collectIds((data as Record<string, unknown>)[k]));
+          }
+        }
+      };
       const parsed = JSON.parse(body.content);
       collectIds(parsed);
+      setCollapsedBlocks(new Set(allIds));
     } catch {}
   }, [body.content]);
-
-  const collectIds = (data: unknown) => {
-    const ids: string[] = [];
-    const traverse = (obj: unknown) => {
-      if (Array.isArray(obj) && obj.length > 0) {
-        ids.push(generateId());
-        obj.forEach(traverse);
-      } else if (obj && typeof obj === 'object') {
-        const keys = Object.keys(obj);
-        if (keys.length > 0) {
-          ids.push(generateId());
-          keys.forEach(k => traverse(obj[k as keyof typeof obj]));
-        }
-      }
-    };
-    traverse(data);
-    setCollapsedBlocks(new Set(ids));
-  };
 
   /** Escape HTML */
   const escapeHtml = (str: string) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -215,7 +239,7 @@ const BodyEditor: React.FC = () => {
                   <button
                     key={t}
                     className={`type-btn ${rawType === t ? 'active' : ''}`}
-                    onClick={() => { setRawType(t); setIsViewMode(false); }}
+                    onClick={() => { setRawType(t); setIsViewMode(false); updateRequest({ body: { ...body, rawType: t } }); }}
                   >
                     {t === 'json' ? 'JSON' : t === 'text' ? 'Text' : t === 'xml' ? 'XML' : t === 'html' ? 'HTML' : 'JavaScript'}
                   </button>
