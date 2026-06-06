@@ -1,138 +1,243 @@
 # SimpleRequest
 
-A lightweight HTTP request debugging tool - Postman-style Chrome Extension
+A lightweight HTTP request debugging tool — Postman-style Chrome Extension.
+
+![SimpleRequest](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Chrome](https://img.shields.io/badge/chrome-Manifest_V3-orange)
 
 ## Features
 
+### Request Builder
+
 | Feature | Description |
 |---------|-------------|
-| 🚀 HTTP Methods | GET/POST/PUT/DELETE/PATCH, etc. |
-| 📝 Request Body | JSON/Form-Data/Raw |
-| 📋 Headers | Custom headers with autocomplete |
-| 📊 Response | JSON syntax highlighting |
-| 📜 History | Auto-save, max 100 entries |
-| 🔄 curl Import | Paste curl command, auto-convert |
-| ⚙️ Smart Defaults | Content-Type/Accept auto-added |
-| 🖱️ Resizable Layout | Drag to adjust panels |
+| HTTP Methods | GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS |
+| Smart URL | Auto-adds protocol, bidirectional query param sync |
+| curl Import | Paste a curl command — method, URL, headers, body, and auth auto-populate |
+| Enter to Send | Press Enter in URL field to send immediately |
+
+### Authorization
+
+| Type | Details |
+|------|---------|
+| No Auth | Skip authentication |
+| API Key | Custom key/value, sent as header or query parameter |
+| Bearer Token | `Authorization: Bearer <token>` |
+| Basic Auth | Username/password → `Authorization: Basic <encoded>` |
+| OAuth 2.0 | Access token with configurable token type |
+
+User-defined headers always take priority over auth-generated headers.
+
+### Request Body
+
+| Type | Description |
+|------|-------------|
+| form-data | Key-value pairs with file upload support (base64 → Blob) |
+| x-www-form-urlencoded | URL-encoded form data (text only) |
+| raw | JSON / Text / XML / HTML / JavaScript — with subtype selector |
+| none | No request body |
+
+Each body type retains its own content when switching between types.
+
+### Headers & Params
+
+- Key-value editor with enable/disable toggles and descriptions
+- URL query params auto-synced with query string (bidirectional)
+- Per-item checkboxes to quickly include/exclude entries
+
+### Response Viewer
+
+- Color-coded status codes (2xx green → 5xx red)
+- Response time and size display
+- JSON body with syntax highlighting, collapsible nodes, and Collapse All / Expand All
+- Raw view toggle for plain text
+- Response headers viewer
+- One-click copy for body or headers
+
+### History
+
+- Automatic request history — method, URL, status code, and timestamp
+- Click any entry to reload the full request
+- Delete individual entries or clear all history
+- Persists across sessions via `chrome.storage.local`
+- Maximum 100 entries
+
+### Variables
+
+- Define `{{variableName}}` placeholders in URL, headers, body, and auth fields
+- Enable/disable individual variables
+- Persist across sessions
+
+### UI
+
+- Resizable panels — drag to adjust request/response split and sidebar width
+- Sidebar tabs for History and Variables
+- Dark theme optimized for developer workflows
+- Opens in a full browser tab (not a popup) for comfortable editing
 
 ## Installation
 
-### Method 1: Load Unpacked Extension (Developer Mode)
+### Load Unpacked Extension (Developer Mode)
 
-1. Build the project:
+1. Clone and build:
    ```bash
+   git clone https://github.com/DevsDi/SimpleRequest.git
+   cd SimpleRequest
    npm install
    npm run build
    ```
 
 2. Open Chrome, go to `chrome://extensions/`
 
-3. Enable **"Developer mode"** (toggle in top-right)
+3. Enable **Developer mode** (toggle in top-right)
 
-4. Click **"Load unpacked"**
+4. Click **Load unpacked**
 
 5. Select the `dist` folder
 
-6. Done! Click the **H icon** in toolbar to use
+6. Click the **H icon** in the toolbar to open SimpleRequest in a new tab
 
-### Method 2: Packaged Extension
+### Install from Chrome Web Store
 
-1. Go to `chrome://extensions/`, click **"Pack extension"**
-
-2. Extension root directory: `dist`
-
-3. Generate `.crx` file for installation
+*Coming soon*
 
 ## Usage
 
-### Send Request
-1. Click extension icon - opens in new tab
-2. Enter URL or paste curl command in URL field
-3. Select HTTP method (GET/POST, etc.)
-4. Configure headers/body in tabs
+### Send a Request
+
+1. Click the extension icon — opens in a new tab
+2. Enter a URL or paste a curl command in the URL field
+3. Select an HTTP method (GET, POST, etc.)
+4. Configure headers, body, or auth in the tabs
 5. Click **Send**
 
-### Header Autocomplete
-- Type header name to see suggestions
-- 30+ common headers (Authorization, Content-Type, etc.)
-- Navigate with ↑↓ keys, Enter to confirm
+### Import from curl
+
+Paste a full `curl` command into the URL bar. SimpleRequest automatically parses:
+
+- HTTP method (`-X`, `--request`)
+- URL
+- Headers (`-H`, `--header`)
+- Request body (`-d`, `--data`, `--data-raw`, `--data-binary`)
+- Basic auth (`-u`, `--user`)
+- Content type → raw subtype (JSON, XML, etc.)
+
+### Use Variables
+
+1. Open the **Variables** tab in the sidebar
+2. Add variable names and values (e.g., `baseUrl` → `https://api.example.com`)
+3. Reference them in URL, headers, body, or auth as `{{baseUrl}}`
+4. Disabled variables are kept but not substituted
 
 ### View Response
-- Auto-formatted with JSON highlighting
-- Shows status code, response time, size
-- Switch to view response headers
 
-### History
-- Left panel shows last 100 requests
-- Click to re-send quickly
-- Clear button to delete all
+- **Body tab**: Formatted JSON with collapsible nodes, or raw text
+- **Headers tab**: All response headers with copy support
+- Status code, response time, and size shown in the status bar
+
+### Manage History
+
+- Left sidebar shows up to 100 recent requests
+- Click to reload a previous request
+- Hover to reveal the delete button (×) for single entry removal
+- **Clear** button deletes all history
 
 ### Adjust Layout
-- Drag sidebar right edge → adjust history panel width
-- Drag request section bottom edge → adjust request/response height ratio
+
+- Drag the **sidebar right edge** → adjust history/variables panel width
+- Drag the **request section bottom edge** → adjust request/response height ratio
+- Layout preferences persist across sessions
 
 ## Tech Stack
 
-- **Frontend**: React 18 + TypeScript + Zustand
-- **Build**: Vite 5
-- **Styles**: SCSS + Dark theme
-- **Extension**: Chrome Extension Manifest V3
-- **Highlight**: react-syntax-highlighter
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18 + TypeScript + Zustand |
+| Build | Vite 5 |
+| Styles | SCSS + Dark theme |
+| Extension | Chrome Extension Manifest V3 |
+| Highlight | react-syntax-highlighter |
 
 ## Project Structure
 
 ```
 SimpleRequest/
-├── dist/                    # Build output (load to Chrome)
+├── dist/                    # Build output (load into Chrome)
 │   ├── manifest.json
 │   ├── icons/
 │   ├── background/
 │   ├── src/popup/
 │   ├── popup.js
 │   └── assets/
+├── docs/                    # GitHub Pages
+│   └── PRIVACY.html
 ├── src/
 │   ├── popup/               # UI components
 │   │   ├── App.tsx
 │   │   └── components/
-│   ├── background/          # Service Worker
+│   │       ├── RequestPanel/    # Method, URL, Headers, Body, Auth, Params
+│   │       ├── ResponsePanel/   # Status, Body (JSON/Raw), Headers
+│   │       ├── HistoryPanel/    # Request history list
+│   │       ├── VariablesPanel/  # Variable management
+│   │       └── DonateModal/     # Support dialog
+│   ├── background/          # Service Worker (HTTP requests, CORS)
 │   │   └── index.ts
 │   ├── services/            # Business logic
-│   │   ├── requestService.ts
-│   │   ├── curlParser.ts
-│   │   └── storageService.ts
+│   │   ├── requestService.ts    # Request execution & history
+│   │   ├── curlParser.ts        # curl command parser
+│   │   ├── variableService.ts   # Variable substitution
+│   │   └── storageService.ts    # Chrome storage wrapper
 │   ├── store/               # Zustand state
+│   │   └── index.ts
 │   ├── types/               # TypeScript types
-│   └── utils/               # Constants/utilities
+│   │   └── index.ts
+│   └── utils/               # Constants & utilities
+│       ├── constants.ts
+│       └── timeUtils.ts
 ├── public/
 │   ├── manifest.json
 │   └── icons/
 ├── package.json
 ├── vite.config.ts
+├── tsconfig.json
 ├── README.md
+├── CHANGELOG.md
+├── CONTRIBUTING.md
 ├── PRIVACY.md
-└── PERMISSIONS.md
+├── PERMISSIONS.md
+└── LICENSE
 ```
 
-## Shortcuts
+## Keyboard Shortcuts
 
 | Action | Shortcut |
 |--------|----------|
-| Send request | Enter in URL field |
-| Confirm suggestion | Enter / Tab |
-| Cancel suggestion | Escape |
-| Navigate suggestions | ↑ / ↓ |
+| Send request | `Enter` in URL field |
+| Confirm header suggestion | `Enter` / `Tab` |
+| Cancel suggestion | `Escape` |
+| Navigate suggestions | `↑` / `↓` |
 
 ## Development
 
 ```bash
-npm run dev      # Development mode
-npm run build    # Production build
-npm run lint     # Code linting
+npm install     # Install dependencies
+npm run dev     # Development mode with HMR
+npm run build   # Production build to dist/
+npm run lint    # ESLint check
 ```
+
+## Permissions
+
+See [PERMISSIONS.md](./PERMISSIONS.md) for detailed justification of each permission.
+
+| Permission | Purpose |
+|------------|---------|
+| `storage` | Save history and settings locally |
+| `tabs` | Create new tab for the UI |
+| `<all_urls>` | Send HTTP requests to any URL |
 
 ## Privacy Policy
 
-See [PRIVACY.md](./PRIVACY.md)
+See [PRIVACY.md](./PRIVACY.md) or the hosted version at [devsdi.github.io/SimpleRequest/PRIVACY.html](https://devsdi.github.io/SimpleRequest/PRIVACY.html)
 
 **Core commitments**:
 - ✅ All data stored locally in browser
@@ -140,21 +245,14 @@ See [PRIVACY.md](./PRIVACY.md)
 - ✅ No personal information collected
 - ✅ Clear all data anytime
 
-## Permissions
+## Contributing
 
-See [PERMISSIONS.md](./PERMISSIONS.md)
-
-**Requested permissions**:
-| Permission | Purpose |
-|------------|---------|
-| `storage` | Save history and settings |
-| `tabs` | Create new tab for UI |
-| `<all_urls>` | Send HTTP requests to any URL |
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT License
+[MIT](./LICENSE)
 
 ---
 
-**Made with ⚡ by SimpleRequest**
+**Made with ⚡ by [DevsDi](https://github.com/DevsDi)**

@@ -74,8 +74,8 @@ If this policy changes significantly, we will notify you in extension update not
 
 For privacy-related questions:
 
-- GitHub: https://github.com/simple-request
-- Email: privacy@simple-request.example.com
+- GitHub: https://github.com/DevsDi/SimpleRequest
+- Email: Open an issue on GitHub
 
 ## License
 
