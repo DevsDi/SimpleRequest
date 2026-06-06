@@ -2,7 +2,7 @@
  * 应用常量配置
  */
 
-import { Header, HttpRequest } from '@/types';
+import { Header, HttpRequest, AuthConfig } from '@/types';
 
 /** 最大历史记录条数 */
 export const MAX_HISTORY_ITEMS = 100;
@@ -73,6 +73,11 @@ export const HEADER_SUGGESTIONS: { key: string; description: string }[] = [
   { key: 'Warning', description: '警告信息' },
 ];
 
+/** 默认认证配置 */
+export const DEFAULT_AUTH: AuthConfig = {
+  type: 'no-auth'
+};
+
 /** 默认请求配置 */
 export const DEFAULT_REQUEST: HttpRequest = {
   id: '',
@@ -81,6 +86,7 @@ export const DEFAULT_REQUEST: HttpRequest = {
   url: '',
   headers: [],
   body: { type: 'none', content: '' },
+  auth: DEFAULT_AUTH,
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };

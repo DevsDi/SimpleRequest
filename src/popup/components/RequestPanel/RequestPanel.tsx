@@ -5,20 +5,21 @@ import MethodSelector from './MethodSelector';
 import HeadersEditor from './HeadersEditor';
 import BodyEditor from './BodyEditor';
 import ParamsEditor from './ParamsEditor';
+import AuthEditor from './AuthEditor';
 import './RequestPanel.scss';
 
 /**
  * Request tab type
  */
-type RequestTab = 'params' | 'headers' | 'body';
+type RequestTab = 'params' | 'authorization' | 'headers' | 'body';
 
 /**
  * Request panel component
- * URL input, method selection, headers/body editing
+ * URL input, method selection, headers/body/auth editing
  */
 const RequestPanel: React.FC = () => {
   const { currentRequest, updateRequest, isLoading, setLoading, setError, setResponse, addHistory, variables } = useStore();
-  const [activeTab, setActiveTab] = useState<RequestTab>('headers');
+  const [activeTab, setActiveTab] = useState<RequestTab>('params');
 
   /** Detect pasted content for curl command */
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -125,13 +126,19 @@ const RequestPanel: React.FC = () => {
         </button>
       </div>
 
-      {/* Tab switcher */}
+      {/* Tab switcher - Postman style */}
       <div className="request-tabs">
         <button
           className={`tab-btn ${activeTab === 'params' ? 'active' : ''}`}
           onClick={() => setActiveTab('params')}
         >
           Params
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'authorization' ? 'active' : ''}`}
+          onClick={() => setActiveTab('authorization')}
+        >
+          Authorization
         </button>
         <button
           className={`tab-btn ${activeTab === 'headers' ? 'active' : ''}`}
@@ -150,6 +157,7 @@ const RequestPanel: React.FC = () => {
       {/* Tab content */}
       <div className="request-content">
         {activeTab === 'params' && <ParamsEditor />}
+        {activeTab === 'authorization' && <AuthEditor />}
         {activeTab === 'headers' && <HeadersEditor />}
         {activeTab === 'body' && <BodyEditor />}
       </div>

@@ -1,0 +1,82 @@
+/** AuthEditor styles - Postman style */
+
+.auth-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  height: 100%;
+}
+
+.auth-type-selector {
+  flex-shrink: 0;
+
+  select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+  }
+}
+
+.auth-config {
+  flex: 1;
+}
+
+.no-auth-hint {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  label {
+    width: 100px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  input, select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+  }
+
+  input[type="password"] {
+    font-family: monospace;
+  }
+}
+
+.config-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius);
+}
