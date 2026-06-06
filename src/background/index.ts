@@ -3,7 +3,7 @@
  * 处理跨域HTTP请求和消息传递
  */
 
-import { ExecuteRequestMessage, HttpResponse } from '@/types';
+import { ExecuteRequestMessage, HttpResponse, AuthConfig } from '@/types';
 
 // 点击图标打开新标签页
 chrome.action.onClicked.addListener(() => {
@@ -34,25 +34,86 @@ chrome.runtime.onMessage.addListener(
 );
 
 /**
+ * 根据认证配置生成请求头
+ */
+function buildAuthHeaders(auth: AuthConfig): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  if (!auth || auth.type === 'no-auth') {
+    return headers;
+  }
+
+  switch (auth.type) {
+    case 'api-key':
+      if (auth.apiKey?.key && auth.apiKey?.value) {
+        // API Key 添加到 header
+        headers[auth.apiKey.key] = auth.apiKey.value;
+      }
+      break;
+
+    case 'bearer-token':
+      if (auth.bearerToken?.token) {
+        headers['authorization'] = `Bearer ${auth.bearerToken.token}`;
+      }
+      break;
+
+    case 'basic-auth':
+      if (auth.basicAuth?.username) {
+        const credentials = btoa(`${auth.basicAuth.username}:${auth.basicAuth.password || ''}`);
+        headers['authorization'] = `Basic ${credentials}`;
+      }
+      break;
+
+    case 'oauth2':
+      if (auth.oauth2?.accessToken) {
+        const tokenType = auth.oauth2.tokenType || 'Bearer';
+        headers['authorization'] = `${tokenType} ${auth.oauth2.accessToken}`;
+      }
+      break;
+  }
+
+  return headers;
+}
+
+/**
+ * 根据认证配置修改 URL（添加 query 参数）
+ */
+function applyAuthToUrl(url: string, auth: AuthConfig): string {
+  if (!auth || auth.type !== 'api-key') {
+    return url;
+  }
+
+  if (auth.apiKey?.addTo === 'query' && auth.apiKey?.key && auth.apiKey?.value) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}${encodeURIComponent(auth.apiKey.key)}=${encodeURIComponent(auth.apiKey.value)}`;
+  }
+
+  return url;
+}
+
+/**
  * 智能添加默认请求头
- * @param request 请求配置
- * @param hasFormDataBody 是否有 FormData body (不设置 Content-Type)
- * @returns 完整的请求头
  */
 function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): Record<string, string> {
   const headers: Record<string, string> = {};
 
-  // 1. 添加用户自定义的启用请求头
+  // 1. 添加认证头
+  const authHeaders = buildAuthHeaders(request.auth);
+  Object.assign(headers, authHeaders);
+
+  // 2. 添加用户自定义的启用请求头（不覆盖认证头）
   request.headers
     .filter((h) => h.enabled && h.key.trim())
     .forEach((h) => {
-      headers[h.key.toLowerCase()] = h.value;
+      const key = h.key.toLowerCase();
+      if (!headers[key]) {
+        headers[key] = h.value;
+      }
     });
 
-  // 2. 智能添加默认请求头（用户未设置时）
+  // 3. 智能添加默认请求头（用户未设置时）
 
   // Content-Type: 根据body类型自动设置
-  // 注意：form-data 不手动设置 Content-Type，让浏览器自动处理 boundary
   if (!hasFormDataBody && request.body.type !== 'none' && request.body.content.trim()) {
     const contentTypeKey = 'content-type';
     if (!headers[contentTypeKey]) {
@@ -87,7 +148,6 @@ function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): R
 
 /**
  * 解析 form-data 内容为 FormData 对象
- * 格式: key=value (每行一个)
  */
 function parseFormDataContent(content: string): FormData {
   const formData = new FormData();
@@ -106,7 +166,6 @@ function parseFormDataContent(content: string): FormData {
 
 /**
  * 解析 x-www-form-urlencoded 内容为 URLSearchParams
- * 格式: key=value (每行一个)
  */
 function parseUrlencodedContent(content: string): URLSearchParams {
   const params = new URLSearchParams();
@@ -125,13 +184,14 @@ function parseUrlencodedContent(content: string): URLSearchParams {
 
 /**
  * 执行HTTP请求
- * @param request HTTP请求配置
- * @returns HTTP响应
  */
 async function executeRequest(request: HttpRequestInternal): Promise<HttpResponse> {
   const startTime = Date.now();
 
   try {
+    // 应用认证到 URL（API Key query 参数）
+    let url = applyAuthToUrl(request.url, request.auth);
+
     // 构建请求体
     let body: string | FormData | URLSearchParams | undefined = undefined;
     let hasFormDataBody = false;
@@ -151,11 +211,11 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
       }
     }
 
-    // 构建请求头（智能添加默认头）
+    // 构建请求头（包含认证）
     const headers = buildHeaders(request, hasFormDataBody);
 
     // 发起请求
-    const response = await fetch(request.url, {
+    const response = await fetch(url, {
       method: request.method,
       headers,
       body: body,
@@ -191,4 +251,5 @@ interface HttpRequestInternal {
   url: string;
   headers: Array<{ key: string; value: string; enabled: boolean }>;
   body: { type: string; content: string };
+  auth: AuthConfig;
 }

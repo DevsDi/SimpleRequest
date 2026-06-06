@@ -4,6 +4,54 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 
 /**
+ * 认证类型
+ */
+export type AuthType = 'no-auth' | 'api-key' | 'bearer-token' | 'basic-auth' | 'digest-auth' | 'oauth2';
+
+/**
+ * API Key 配置
+ */
+export interface ApiKeyConfig {
+  key: string;
+  value: string;
+  addTo: 'header' | 'query';
+}
+
+/**
+ * Bearer Token 配置
+ */
+export interface BearerTokenConfig {
+  token: string;
+}
+
+/**
+ * Basic Auth 配置
+ */
+export interface BasicAuthConfig {
+  username: string;
+  password: string;
+}
+
+/**
+ * OAuth2 配置
+ */
+export interface OAuth2Config {
+  accessToken: string;
+  tokenType: string;
+}
+
+/**
+ * 认证配置
+ */
+export interface AuthConfig {
+  type: AuthType;
+  apiKey?: ApiKeyConfig;
+  bearerToken?: BearerTokenConfig;
+  basicAuth?: BasicAuthConfig;
+  oauth2?: OAuth2Config;
+}
+
+/**
  * 变量定义
  */
 export interface Variable {
@@ -58,6 +106,8 @@ export interface HttpRequest {
   headers: Header[];
   /** 请求体 */
   body: RequestBody;
+  /** 认证配置 */
+  auth: AuthConfig;
   /** 超时时间(ms) */
   timeout?: number;
   /** 创建时间 */

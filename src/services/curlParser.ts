@@ -1,4 +1,4 @@
-import { HttpMethod, Header, RequestBody, HttpRequest } from '@/types';
+import { HttpMethod, Header, RequestBody, HttpRequest, AuthConfig } from '@/types';
 
 /**
  * curl命令解析结果
@@ -30,6 +30,7 @@ class CurlParser {
       url: result.url,
       headers: result.headers,
       body: result.body || { type: 'none', content: '' },
+      auth: { type: 'no-auth' },
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
