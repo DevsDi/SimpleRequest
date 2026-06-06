@@ -33,6 +33,8 @@ interface AppState {
   setHistory: (history: HistoryEntry[]) => void;
   /** 添加历史记录 */
   addHistory: (entry: HistoryEntry) => void;
+  /** 删除单条历史记录 */
+  removeHistory: (id: string) => void;
   /** 清空历史记录 */
   clearHistory: () => void;
   /** 设置变量 */
@@ -52,7 +54,20 @@ export const useStore = create<AppState>((set) => ({
   history: [],
   variables: [],
 
-  setCurrentRequest: (request) => set({ currentRequest: request }),
+  setCurrentRequest: (request) => {
+    // Migrate legacy 'json' body type to 'raw' (JSON was merged into raw subtype)
+    if ((request.body?.type as string) === 'json') {
+      request = {
+        ...request,
+        body: { ...request.body, type: 'raw' },
+      };
+    }
+    // Ensure auth field exists (legacy entries may not have it)
+    if (!request.auth) {
+      request = { ...request, auth: { type: 'no-auth' } };
+    }
+    set({ currentRequest: request });
+  },
 
   updateRequest: (partial) =>
     set((state) => ({
@@ -76,6 +91,11 @@ export const useStore = create<AppState>((set) => ({
       const newHistory = [entry, ...state.history].slice(0, 100);
       return { history: newHistory };
     }),
+
+  removeHistory: (id) =>
+    set((state) => ({
+      history: state.history.filter((entry) => entry.id !== id),
+    })),
 
   clearHistory: () => set({ history: [] }),
 

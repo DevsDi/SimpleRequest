@@ -58,8 +58,37 @@
   padding: 8px 12px;
   cursor: pointer;
   border-bottom: 1px solid var(--border-light);
+  position: relative;
+
   &:hover {
     background: var(--bg-hover);
+
+    .item-delete-btn {
+      opacity: 1;
+    }
+  }
+}
+
+.item-delete-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--error-color);
+    color: #fff;
   }
 }
 

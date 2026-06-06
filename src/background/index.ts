@@ -97,35 +97,51 @@ function applyAuthToUrl(url: string, auth: AuthConfig): string {
 function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): Record<string, string> {
   const headers: Record<string, string> = {};
 
-  // 1. 添加认证头
-  const authHeaders = buildAuthHeaders(request.auth);
-  Object.assign(headers, authHeaders);
-
-  // 2. 添加用户自定义的启用请求头（不覆盖认证头）
+  // 1. Add user-defined enabled headers first (user takes priority)
   request.headers
     .filter((h) => h.enabled && h.key.trim())
     .forEach((h) => {
       const key = h.key.toLowerCase();
-      if (!headers[key]) {
-        headers[key] = h.value;
-      }
+      headers[key] = h.value;
     });
 
-  // 3. 智能添加默认请求头（用户未设置时）
+  // 2. Add auth headers (do NOT overwrite user-defined headers)
+  const authHeaders = buildAuthHeaders(request.auth);
+  for (const [key, value] of Object.entries(authHeaders)) {
+    if (!headers[key]) {
+      headers[key] = value;
+    }
+  }
 
-  // Content-Type: 根据body类型自动设置
+  // 3. Auto-set default headers (when user hasn't set them)
+
+  // Content-Type: auto-set based on body type and rawType
   if (!hasFormDataBody && request.body.type !== 'none' && request.body.content.trim()) {
     const contentTypeKey = 'content-type';
     if (!headers[contentTypeKey]) {
       switch (request.body.type) {
-        case 'json':
-          headers[contentTypeKey] = 'application/json';
-          break;
         case 'x-www-form-urlencoded':
           headers[contentTypeKey] = 'application/x-www-form-urlencoded';
           break;
         case 'raw':
-          headers[contentTypeKey] = 'text/plain';
+          // Set Content-Type based on raw subtype
+          switch (request.body.rawType) {
+            case 'json':
+              headers[contentTypeKey] = 'application/json';
+              break;
+            case 'xml':
+              headers[contentTypeKey] = 'application/xml';
+              break;
+            case 'html':
+              headers[contentTypeKey] = 'text/html';
+              break;
+            case 'javascript':
+              headers[contentTypeKey] = 'application/javascript';
+              break;
+            default:
+              headers[contentTypeKey] = 'text/plain';
+              break;
+          }
           break;
       }
     }
@@ -148,12 +164,49 @@ function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): R
 
 /**
  * 解析 form-data 内容为 FormData 对象
+ * Supports file entries: key=@filename;type=mimetype;base64,data
  */
 function parseFormDataContent(content: string): FormData {
   const formData = new FormData();
   const lines = content.split('\n').filter(line => line.trim());
 
   for (const line of lines) {
+    // Check for file entry: key=@filename;type=mimetype;base64,data
+    const eqIdx = line.indexOf('=@');
+    if (eqIdx > 0) {
+      const key = line.slice(0, eqIdx).trim();
+      const filePart = line.slice(eqIdx + 2);
+      const semicolonIdx = filePart.indexOf(';');
+      const fileName = semicolonIdx > 0 ? filePart.slice(0, semicolonIdx) : filePart;
+
+      let mimeType = 'application/octet-stream';
+      let base64Data = '';
+
+      if (semicolonIdx > 0) {
+        const rest = filePart.slice(semicolonIdx + 1);
+        const typeMatch = rest.match(/^type=([^;]+);/);
+        if (typeMatch) mimeType = typeMatch[1];
+        const base64Match = rest.match(/base64,(.+)$/);
+        if (base64Match) base64Data = base64Match[1];
+      }
+
+      if (base64Data) {
+        // Decode base64 to binary and create Blob
+        const binaryStr = atob(base64Data);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: mimeType });
+        formData.append(key, blob, fileName);
+      } else {
+        // Fallback: no data, send filename as text
+        formData.append(key, fileName);
+      }
+      continue;
+    }
+
+    // Regular text entry: key=value
     const [key, ...valueParts] = line.split('=');
     const value = valueParts.join('=');
     if (key.trim()) {
@@ -196,7 +249,10 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
     let body: string | FormData | URLSearchParams | undefined = undefined;
     let hasFormDataBody = false;
 
-    if (request.body.type !== 'none' && request.body.content.trim()) {
+    // GET/HEAD requests must not have a body (fetch API restriction)
+    const isBodyAllowed = !['GET', 'HEAD'].includes(request.method.toUpperCase());
+
+    if (isBodyAllowed && request.body.type !== 'none' && request.body.content.trim()) {
       switch (request.body.type) {
         case 'form-data':
           body = parseFormDataContent(request.body.content);
@@ -250,6 +306,6 @@ interface HttpRequestInternal {
   method: string;
   url: string;
   headers: Array<{ key: string; value: string; enabled: boolean }>;
-  body: { type: string; content: string };
+  body: { type: string; content: string; rawType?: string };
   auth: AuthConfig;
 }

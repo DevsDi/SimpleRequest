@@ -60,26 +60,49 @@ class VariableService {
    * @returns 替换后的请求（深拷贝）
    */
   processRequest(request: HttpRequest, variables: Variable[]): HttpRequest {
-    // 深拷贝请求，避免修改原对象
+    // Deep copy request to avoid mutating original
     const processed: HttpRequest = {
       ...request,
       headers: request.headers.map((h) => ({ ...h })),
       body: { ...request.body },
+      auth: { ...request.auth },
     };
 
-    // 替换 URL
+    // Replace variables in URL
     processed.url = this.replaceVariables(processed.url, variables);
 
-    // 替换 Headers
+    // Replace variables in Headers
     processed.headers = processed.headers.map((h) => ({
       ...h,
       key: this.replaceVariables(h.key, variables),
       value: this.replaceVariables(h.value, variables),
     }));
 
-    // 替换 Body
+    // Replace variables in Body
     if (processed.body.content) {
       processed.body.content = this.replaceVariables(processed.body.content, variables);
+    }
+
+    // Replace variables in Auth fields
+    if (processed.auth) {
+      if (processed.auth.apiKey) {
+        processed.auth.apiKey = { ...processed.auth.apiKey };
+        processed.auth.apiKey.key = this.replaceVariables(processed.auth.apiKey.key, variables);
+        processed.auth.apiKey.value = this.replaceVariables(processed.auth.apiKey.value, variables);
+      }
+      if (processed.auth.bearerToken) {
+        processed.auth.bearerToken = { ...processed.auth.bearerToken };
+        processed.auth.bearerToken.token = this.replaceVariables(processed.auth.bearerToken.token, variables);
+      }
+      if (processed.auth.basicAuth) {
+        processed.auth.basicAuth = { ...processed.auth.basicAuth };
+        processed.auth.basicAuth.username = this.replaceVariables(processed.auth.basicAuth.username, variables);
+        processed.auth.basicAuth.password = this.replaceVariables(processed.auth.basicAuth.password, variables);
+      }
+      if (processed.auth.oauth2) {
+        processed.auth.oauth2 = { ...processed.auth.oauth2 };
+        processed.auth.oauth2.accessToken = this.replaceVariables(processed.auth.oauth2.accessToken, variables);
+      }
     }
 
     return processed;

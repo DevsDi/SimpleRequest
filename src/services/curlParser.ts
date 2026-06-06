@@ -1,4 +1,4 @@
-import { HttpMethod, Header, RequestBody, HttpRequest, AuthConfig } from '@/types';
+import { HttpMethod, Header, RequestBody, HttpRequest, AuthConfig, RawContentType } from '@/types';
 
 /**
  * curl命令解析结果
@@ -8,6 +8,7 @@ interface CurlParseResult {
   url: string;
   headers: Header[];
   body: RequestBody | null;
+  auth?: AuthConfig;
 }
 
 /**
@@ -30,7 +31,7 @@ class CurlParser {
       url: result.url,
       headers: result.headers,
       body: result.body || { type: 'none', content: '' },
-      auth: { type: 'no-auth' },
+      auth: result.auth || { type: 'no-auth' },
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -81,9 +82,11 @@ class CurlParser {
         case '--data-raw':
         case '--data-binary':
           const bodyContent = tokens[++i] || '';
+          const bodyType = this.detectBodyType(result.headers, bodyContent);
           result.body = {
-            type: this.detectBodyType(result.headers, bodyContent),
+            type: bodyType,
             content: bodyContent,
+            rawType: bodyType === 'raw' ? this.detectRawType(result.headers, bodyContent) : undefined,
           };
           // 如果没有指定方法,有body时默认POST
           if (result.method === 'GET') {
@@ -94,19 +97,26 @@ class CurlParser {
         case '-u':
         case '--user':
           const authStr = tokens[++i] || '';
-          result.headers.push({
-            key: 'Authorization',
-            value: `Basic ${btoa(authStr)}`,
-            enabled: true,
-          });
+          // Use auth system instead of raw header
+          const colonIdx = authStr.indexOf(':');
+          result.auth = {
+            type: 'basic-auth',
+            basicAuth: {
+              username: colonIdx > 0 ? authStr.slice(0, colonIdx) : authStr,
+              password: colonIdx > 0 ? authStr.slice(colonIdx + 1) : '',
+            },
+          };
           break;
 
         default:
           // URL识别
           if (token.startsWith('http://') || token.startsWith('https://')) {
             result.url = token;
+          } else if (!result.url && token.includes('.') && !token.startsWith('-') && !token.startsWith('curl')) {
+            // Recognize URLs without protocol (e.g. example.com/api)
+            result.url = 'https://' + token;
           } else if (token.startsWith('curl')) {
-            // 忽略curl命令本身
+            // Ignore curl command itself
           }
       }
     }
@@ -234,23 +244,49 @@ class CurlParser {
     );
 
     if (!contentType) {
-      // 尝试根据内容判断是否是JSON
+      // JSON content falls under 'raw' type (with JSON subtype in BodyEditor)
       try {
         JSON.parse(body);
-        return 'json';
+        return 'raw';
       } catch {
         return 'raw';
       }
     }
 
     const ct = contentType.value.toLowerCase();
-    if (ct.includes('application/json')) return 'json';
+    // JSON is a subtype of 'raw' in the BodyEditor UI
+    if (ct.includes('application/json')) return 'raw';
     if (ct.includes('multipart/form-data')) return 'form-data';
     if (ct.includes('application/x-www-form-urlencoded')) {
       return 'x-www-form-urlencoded';
     }
 
     return 'raw';
+  }
+
+  /** Detect raw subtype from Content-Type header or content */
+  private detectRawType(headers: Header[], body: string): RawContentType | undefined {
+    const contentType = headers.find(
+      (h) => h.key.toLowerCase() === 'content-type'
+    );
+
+    if (contentType) {
+      const ct = contentType.value.toLowerCase();
+      if (ct.includes('application/json')) return 'json';
+      if (ct.includes('application/xml') || ct.includes('text/xml')) return 'xml';
+      if (ct.includes('text/html')) return 'html';
+      if (ct.includes('application/javascript') || ct.includes('text/javascript')) return 'javascript';
+    }
+
+    // Fallback: try to detect from content
+    if (body.trim()) {
+      try {
+        JSON.parse(body);
+        return 'json';
+      } catch {}
+    }
+
+    return undefined;
   }
 }
 

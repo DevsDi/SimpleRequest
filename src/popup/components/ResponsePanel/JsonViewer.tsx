@@ -57,17 +57,31 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
     setCollapsedBlocks(new Set());
   }, []);
 
-  /** Collapse all */
+  /** Collapse all - collect IDs by traversing the parsed JSON structure */
   const collapseAll = useCallback(() => {
-    // Find all block IDs
-    const allIds = new Set<string>();
-    const regex = /data-block-id="([^"]+)"/g;
-    let match;
-    while ((match = regex.exec(renderedJson)) !== null) {
-      allIds.add(match[1]);
-    }
-    setCollapsedBlocks(allIds);
-  }, []);
+    if (!content.trim()) return;
+    try {
+      idCounter = 0;
+      const allIds: string[] = [];
+      const collectIds = (data: unknown) => {
+        if (Array.isArray(data)) {
+          if (data.length > 0) {
+            allIds.push(generateId());
+            data.forEach(collectIds);
+          }
+        } else if (data && typeof data === 'object') {
+          const keys = Object.keys(data);
+          if (keys.length > 0) {
+            allIds.push(generateId());
+            keys.forEach(k => collectIds((data as Record<string, unknown>)[k]));
+          }
+        }
+      };
+      const parsed = JSON.parse(content);
+      collectIds(parsed);
+      setCollapsedBlocks(new Set(allIds));
+    } catch {}
+  }, [content]);
 
   /** Escape HTML */
   const escapeHtml = (str: string): string => {

@@ -78,7 +78,10 @@ export interface Header {
 /**
  * 请求体类型
  */
-export type BodyType = 'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw';
+export type BodyType = 'none' | 'form-data' | 'x-www-form-urlencoded' | 'raw';
+
+/** Raw content subtype */
+export type RawContentType = 'json' | 'text' | 'xml' | 'html' | 'javascript';
 
 /**
  * 请求体配置
@@ -88,6 +91,8 @@ export interface RequestBody {
   type: BodyType;
   /** 内容 */
   content: string;
+  /** Raw subtype (only when type='raw') */
+  rawType?: RawContentType;
 }
 
 /**
