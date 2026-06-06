@@ -1,102 +1,213 @@
-/** FormdataEditor styles */
+/** FormdataEditor styles - Postman style */
 
 .formdata-editor {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   height: 100%;
+  overflow: hidden;
 }
 
-.formdata-list {
+/** Table header */
+.formdata-header {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 0;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+
+  .col-check {
+    width: 30px;
+    flex-shrink: 0;
+  }
+
+  .col-key {
+    width: 25%;
+    min-width: 100px;
+  }
+
+  .col-type {
+    width: 80px;
+    flex-shrink: 0;
+  }
+
+  .col-value {
+    width: 35%;
+    min-width: 120px;
+  }
+
+  .col-desc {
+    width: 20%;
+    min-width: 80px;
+  }
+
+  .col-actions {
+    width: 30px;
+    flex-shrink: 0;
+  }
+}
+
+/** Items list */
+.formdata-list {
   flex: 1;
-  min-height: 0;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .formdata-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: var(--bg-tertiary);
-  border-radius: var(--border-radius);
-  border: 1px solid var(--border-light);
+  gap: 0;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-light);
+
+  &:hover {
+    background: var(--bg-hover);
+  }
 
   &.disabled {
-    opacity: 0.5;
+    opacity: 0.4;
+  }
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 12px;
+    background: transparent;
+    color: var(--text-primary);
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      background: var(--bg-primary);
+    }
+
+    &:hover:not(:focus) {
+      border-color: var(--border-light);
+    }
+  }
+
+  select {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 12px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+  }
+
+  .type-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .file-input {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+
+    input {
+      flex: 1;
+    }
+
+    .select-file-btn {
+      padding: 4px 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+
+      &:hover {
+        background: var(--bg-hover);
+      }
+    }
   }
 }
 
-.formdata-checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--primary-color);
+.col-check {
+  width: 30px;
+  flex-shrink: 0;
 }
 
-.formdata-key {
-  flex: 1;
-  min-width: 80px;
-  padding: 6px 8px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--border-radius);
-  font-size: 12px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-
-  &:focus {
-    outline: none;
-    border-color: var(--primary-color);
-  }
+.col-key {
+  width: 25%;
+  min-width: 100px;
 }
 
-.formdata-value {
-  flex: 2;
+.col-type {
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.col-value {
+  width: 35%;
   min-width: 120px;
-  padding: 6px 8px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--border-radius);
-  font-size: 12px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+}
 
-  &:focus {
-    outline: none;
-    border-color: var(--primary-color);
-  }
+.col-desc {
+  width: 20%;
+  min-width: 80px;
+}
+
+.col-actions {
+  width: 30px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .remove-btn {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   background: transparent;
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
+  border: none;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
 
   &:hover {
     background: var(--error-color);
     color: #fff;
-    border-color: var(--error-color);
   }
 }
 
-.empty-hint {
+.empty-row {
   padding: 20px;
   text-align: center;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .add-btn {
+  margin: 8px 12px;
   flex-shrink: 0;
 }
