@@ -23,7 +23,7 @@ export const HTTP_DOMAIN_PREFIXES = ['localhost', '127.0.0.1', '192.168.'];
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'] as const;
 
 /** 请求体类型列表 */
-export const BODY_TYPES = ['none', 'json', 'form-data', 'x-www-form-urlencoded', 'raw'] as const;
+export const BODY_TYPES = ['none', 'form-data', 'x-www-form-urlencoded', 'raw'] as const;
 
 /** 请求体类型 */
 export type BodyType = typeof BODY_TYPES[number];
