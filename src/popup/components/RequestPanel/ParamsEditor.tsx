@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useStore } from '@/store';
 import './ParamsEditor.scss';
 
@@ -14,13 +14,13 @@ interface ParamItem {
 /**
  * Params editor component
  * Parse URL query params, add/edit/delete params
+ * Params stored independently, synced with URL
  */
 const ParamsEditor: React.FC = () => {
   const { currentRequest, updateRequest } = useStore();
 
-  /** Parse params from URL */
-  const params = useMemo<ParamItem[]>(() => {
-    const url = currentRequest.url;
+  /** Parse initial params from URL */
+  const parseParamsFromUrl = (url: string): ParamItem[] => {
     const queryIndex = url.indexOf('?');
     if (queryIndex === -1) return [];
 
@@ -34,6 +34,20 @@ const ParamsEditor: React.FC = () => {
       const [key, value] = pair.split('=').map((s) => decodeURIComponent(s || ''));
       return { key, value, enabled: true };
     });
+  };
+
+  /** Independent params state */
+  const [params, setParams] = useState<ParamItem[]>(() => parseParamsFromUrl(currentRequest.url));
+
+  /** Sync params when URL changes from outside (e.g. paste curl) */
+  useEffect(() => {
+    const parsed = parseParamsFromUrl(currentRequest.url);
+    // Only sync if URL has query and params differ significantly
+    const currentQuery = params.filter(p => p.key.trim()).map(p => `${p.key}=${p.value}`).join('&');
+    const newQuery = parsed.map(p => `${p.key}=${p.value}`).join('&');
+    if (currentQuery !== newQuery && currentRequest.url.includes('?')) {
+      setParams(parsed);
+    }
   }, [currentRequest.url]);
 
   /** Build URL from params */
@@ -57,30 +71,47 @@ const ParamsEditor: React.FC = () => {
     return `${urlBase}?${queryString}${hash}`;
   }, []);
 
+  /** Update URL when params change */
+  const syncUrl = useCallback((newParams: ParamItem[]) => {
+    const newUrl = buildUrl(currentRequest.url, newParams);
+    if (newUrl !== currentRequest.url) {
+      updateRequest({ url: newUrl });
+    }
+  }, [currentRequest.url, buildUrl, updateRequest]);
+
   /** Add new param */
   const addParam = () => {
     const newParams = [...params, { key: '', value: '', enabled: true }];
-    updateRequest({ url: buildUrl(currentRequest.url, newParams) });
+    setParams(newParams);
+    // Don't sync URL yet - empty key won't be added
   };
 
-  /** Update param */
+  /** Update param and sync URL */
   const updateParam = (index: number, field: keyof ParamItem, value: string | boolean) => {
     const newParams = [...params];
     newParams[index] = { ...newParams[index], [field]: value };
-    updateRequest({ url: buildUrl(currentRequest.url, newParams) });
+    setParams(newParams);
+    // Sync URL if key has value
+    if (field === 'key' && typeof value === 'string' && value.trim()) {
+      syncUrl(newParams);
+    } else if (field === 'value' && newParams[index].key.trim()) {
+      syncUrl(newParams);
+    }
   };
 
   /** Remove param */
   const removeParam = (index: number) => {
     const newParams = params.filter((_, i) => i !== index);
-    updateRequest({ url: buildUrl(currentRequest.url, newParams) });
+    setParams(newParams);
+    syncUrl(newParams);
   };
 
   /** Toggle param enabled */
   const toggleParam = (index: number) => {
     const newParams = [...params];
     newParams[index] = { ...newParams[index], enabled: !newParams[index].enabled };
-    updateRequest({ url: buildUrl(currentRequest.url, newParams) });
+    setParams(newParams);
+    syncUrl(newParams);
   };
 
   /** Move param up */
@@ -88,7 +119,8 @@ const ParamsEditor: React.FC = () => {
     if (index === 0) return;
     const newParams = [...params];
     [newParams[index - 1], newParams[index]] = [newParams[index], newParams[index - 1]];
-    updateRequest({ url: buildUrl(currentRequest.url, newParams) });
+    setParams(newParams);
+    syncUrl(newParams);
   };
 
   /** Move param down */
@@ -96,7 +128,8 @@ const ParamsEditor: React.FC = () => {
     if (index === params.length - 1) return;
     const newParams = [...params];
     [newParams[index], newParams[index + 1]] = [newParams[index + 1], newParams[index]];
-    updateRequest({ url: buildUrl(currentRequest.url, newParams) });
+    setParams(newParams);
+    syncUrl(newParams);
   };
 
   return (
@@ -117,6 +150,7 @@ const ParamsEditor: React.FC = () => {
               placeholder="Key"
               value={param.key}
               onChange={(e) => updateParam(index, 'key', e.target.value)}
+              onBlur={() => syncUrl(params)}
             />
             <input
               type="text"
@@ -124,6 +158,7 @@ const ParamsEditor: React.FC = () => {
               placeholder="Value"
               value={param.value}
               onChange={(e) => updateParam(index, 'value', e.target.value)}
+              onBlur={() => syncUrl(params)}
             />
             <div className="param-actions">
               <button
@@ -167,7 +202,7 @@ const ParamsEditor: React.FC = () => {
       </button>
 
       {/* URL preview */}
-      {params.length > 0 && (
+      {params.filter(p => p.key.trim()).length > 0 && (
         <div className="url-preview">
           <span className="preview-label">URL Preview:</span>
           <div className="preview-url">{currentRequest.url}</div>

@@ -36,9 +36,10 @@ chrome.runtime.onMessage.addListener(
 /**
  * 智能添加默认请求头
  * @param request 请求配置
+ * @param hasFormDataBody 是否有 FormData body (不设置 Content-Type)
  * @returns 完整的请求头
  */
-function buildHeaders(request: HttpRequestInternal): Record<string, string> {
+function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): Record<string, string> {
   const headers: Record<string, string> = {};
 
   // 1. 添加用户自定义的启用请求头
@@ -51,15 +52,13 @@ function buildHeaders(request: HttpRequestInternal): Record<string, string> {
   // 2. 智能添加默认请求头（用户未设置时）
 
   // Content-Type: 根据body类型自动设置
-  if (request.body.type !== 'none' && request.body.content.trim()) {
+  // 注意：form-data 不手动设置 Content-Type，让浏览器自动处理 boundary
+  if (!hasFormDataBody && request.body.type !== 'none' && request.body.content.trim()) {
     const contentTypeKey = 'content-type';
     if (!headers[contentTypeKey]) {
       switch (request.body.type) {
         case 'json':
           headers[contentTypeKey] = 'application/json';
-          break;
-        case 'form-data':
-          headers[contentTypeKey] = 'multipart/form-data';
           break;
         case 'x-www-form-urlencoded':
           headers[contentTypeKey] = 'application/x-www-form-urlencoded';
@@ -87,6 +86,44 @@ function buildHeaders(request: HttpRequestInternal): Record<string, string> {
 }
 
 /**
+ * 解析 form-data 内容为 FormData 对象
+ * 格式: key=value (每行一个)
+ */
+function parseFormDataContent(content: string): FormData {
+  const formData = new FormData();
+  const lines = content.split('\n').filter(line => line.trim());
+
+  for (const line of lines) {
+    const [key, ...valueParts] = line.split('=');
+    const value = valueParts.join('=');
+    if (key.trim()) {
+      formData.append(key.trim(), value || '');
+    }
+  }
+
+  return formData;
+}
+
+/**
+ * 解析 x-www-form-urlencoded 内容为 URLSearchParams
+ * 格式: key=value (每行一个)
+ */
+function parseUrlencodedContent(content: string): URLSearchParams {
+  const params = new URLSearchParams();
+  const lines = content.split('\n').filter(line => line.trim());
+
+  for (const line of lines) {
+    const [key, ...valueParts] = line.split('=');
+    const value = valueParts.join('=');
+    if (key.trim()) {
+      params.append(key.trim(), value || '');
+    }
+  }
+
+  return params;
+}
+
+/**
  * 执行HTTP请求
  * @param request HTTP请求配置
  * @returns HTTP响应
@@ -95,14 +132,27 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
   const startTime = Date.now();
 
   try {
-    // 构建请求头（智能添加默认头）
-    const headers = buildHeaders(request);
-
     // 构建请求体
-    let body: string | undefined = undefined;
+    let body: string | FormData | URLSearchParams | undefined = undefined;
+    let hasFormDataBody = false;
+
     if (request.body.type !== 'none' && request.body.content.trim()) {
-      body = request.body.content;
+      switch (request.body.type) {
+        case 'form-data':
+          body = parseFormDataContent(request.body.content);
+          hasFormDataBody = true;
+          break;
+        case 'x-www-form-urlencoded':
+          body = parseUrlencodedContent(request.body.content);
+          break;
+        default:
+          body = request.body.content;
+          break;
+      }
     }
+
+    // 构建请求头（智能添加默认头）
+    const headers = buildHeaders(request, hasFormDataBody);
 
     // 发起请求
     const response = await fetch(request.url, {
