@@ -44,6 +44,27 @@ interface AppState {
 }
 
 /**
+ * 生成请求的唯一标识（用于判断是否相同请求）
+ */
+function getRequestKey(request: HttpRequest): string {
+  const sortedHeaders = [...request.headers]
+    .filter(h => h.enabled)
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map(h => `${h.key}:${h.value}`);
+
+  const keyParts = [
+    request.method,
+    request.url,
+    sortedHeaders.join('|'),
+    request.body.type,
+    request.body.content,
+    request.auth.type,
+  ];
+
+  return keyParts.join('::');
+}
+
+/**
  * 全局状态管理
  */
 export const useStore = create<AppState>((set) => ({
@@ -88,7 +109,24 @@ export const useStore = create<AppState>((set) => ({
 
   addHistory: (entry) =>
     set((state) => {
-      const newHistory = [entry, ...state.history].slice(0, 100);
+      const requestKey = getRequestKey(entry.request);
+      const existingIndex = state.history.findIndex(
+        (h) => getRequestKey(h.request) === requestKey
+      );
+
+      let newHistory: HistoryEntry[];
+
+      if (existingIndex >= 0) {
+        // 更新现有记录并移到最前面
+        newHistory = [...state.history];
+        newHistory[existingIndex] = { ...newHistory[existingIndex], response: entry.response, timestamp: entry.timestamp };
+        const updated = newHistory.splice(existingIndex, 1)[0];
+        newHistory.unshift(updated);
+      } else {
+        // 添加新记录
+        newHistory = [entry, ...state.history].slice(0, 100);
+      }
+
       return { history: newHistory };
     }),
 

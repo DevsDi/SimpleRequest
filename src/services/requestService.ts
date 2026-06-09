@@ -28,25 +28,68 @@ class RequestService {
   }
 
   /**
+   * 生成请求的唯一标识（用于判断是否相同请求）
+   * @param request 请求配置
+   * @returns 唯一标识字符串
+   */
+  private getRequestKey(request: HttpRequest): string {
+    // 排序 headers 后序列化，确保顺序不影响比较
+    const sortedHeaders = [...request.headers]
+      .filter(h => h.enabled)
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(h => `${h.key}:${h.value}`);
+
+    const keyParts = [
+      request.method,
+      request.url,
+      sortedHeaders.join('|'),
+      request.body.type,
+      request.body.content,
+      request.auth.type,
+    ];
+
+    return keyParts.join('::');
+  }
+
+  /**
    * 保存请求到历史记录
    * @param request 请求配置
    * @param response 响应数据
    */
   async saveToHistory(request: HttpRequest, response: HttpResponse): Promise<void> {
-    const historyEntry: HistoryEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      request,
-      response: this.truncateResponse(response),
-      timestamp: Date.now(),
-    };
+    const requestKey = this.getRequestKey(request);
 
     // 获取现有历史
     const { history } = await chrome.storage.local.get({ history: [] });
 
-    // 添加新条目并限制数量
-    const newHistory = [historyEntry, ...history].slice(0, MAX_HISTORY_ITEMS);
+    // 检查是否已存在相同请求
+    const existingIndex = history.findIndex((entry: HistoryEntry) =>
+      this.getRequestKey(entry.request) === requestKey
+    );
 
-    // 保存
+    if (existingIndex >= 0) {
+      // 更新现有记录的时间戳和响应
+      history[existingIndex] = {
+        ...history[existingIndex],
+        response: this.truncateResponse(response),
+        timestamp: Date.now(),
+      };
+      // 移到最前面
+      const updatedEntry = history.splice(existingIndex, 1)[0];
+      history.unshift(updatedEntry);
+    } else {
+      // 添加新条目
+      const historyEntry: HistoryEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        request,
+        response: this.truncateResponse(response),
+        timestamp: Date.now(),
+      };
+      history.unshift(historyEntry);
+    }
+
+    // 限制数量并保存
+    const newHistory = history.slice(0, MAX_HISTORY_ITEMS);
     await chrome.storage.local.set({ history: newHistory });
   }
 

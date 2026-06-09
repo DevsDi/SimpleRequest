@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '@/store';
-import { requestService, curlParser, variableService } from '@/services';
+import { requestService, curlParser, variableService, curlGenerator } from '@/services';
 import MethodSelector from './MethodSelector';
 import HeadersEditor from './HeadersEditor';
 import BodyEditor from './BodyEditor';
@@ -31,6 +31,17 @@ const RequestPanel: React.FC = () => {
 
       try {
         const request = curlParser.parse(pastedText);
+
+        // Auto-format JSON body if present
+        if (request.body.type === 'raw' && request.body.content.trim()) {
+          try {
+            const parsed = JSON.parse(request.body.content);
+            request.body.content = JSON.stringify(parsed, null, 2);
+          } catch {
+            // Not valid JSON, keep original
+          }
+        }
+
         useStore.getState().setCurrentRequest(request);
 
         // Switch to appropriate tab
@@ -100,6 +111,22 @@ const RequestPanel: React.FC = () => {
     updateRequest({ method: method as typeof currentRequest.method });
   };
 
+  /** Copy request as curl command */
+  const handleCopyAsCurl = async () => {
+    // Process variables before generating curl
+    const processedRequest = variableService.processRequest(currentRequest, variables);
+    processedRequest.url = variableService.normalizeUrl(processedRequest.url);
+
+    const curlCommand = curlGenerator.generate(processedRequest);
+
+    try {
+      await navigator.clipboard.writeText(curlCommand);
+      // Brief visual feedback could be added here
+    } catch {
+      // Clipboard write failed
+    }
+  };
+
   return (
     <div className="request-panel">
       {/* URL input row */}
@@ -117,6 +144,13 @@ const RequestPanel: React.FC = () => {
           onPaste={handlePaste}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
         />
+        <button
+          className="btn btn-secondary copy-curl-btn"
+          onClick={handleCopyAsCurl}
+          title="Copy as curl"
+        >
+          📋
+        </button>
         <button
           className="btn btn-primary send-btn"
           onClick={handleSend}
