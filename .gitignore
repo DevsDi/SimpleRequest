@@ -22,4 +22,7 @@ npm-debug.log*
 .env.*.local
 
 # Cache
-.cache/SimpleRequest-v1.0.0.zip
+.cache/
+
+# Chrome extension package
+SimpleRequest-*.zip
