@@ -3,48 +3,48 @@ import { HttpRequest, HttpResponse, HistoryEntry, Variable } from '@/types';
 import { DEFAULT_REQUEST } from '@/utils/constants';
 
 /**
- * 应用状态
+ * Application state
  */
 interface AppState {
-  /** 当前请求配置 */
+  /** Current request configuration */
   currentRequest: HttpRequest;
-  /** 当前响应 */
+  /** Current response */
   response: HttpResponse | null;
-  /** 是否正在加载 */
+  /** Loading state */
   isLoading: boolean;
-  /** 错误信息 */
+  /** Error message */
   error: string | null;
-  /** 历史记录列表 */
+  /** History list */
   history: HistoryEntry[];
-  /** 变量列表 */
+  /** Variables list */
   variables: Variable[];
 
-  /** 设置当前请求 */
+  /** Set current request */
   setCurrentRequest: (request: HttpRequest) => void;
-  /** 更新请求部分字段 */
+  /** Update request partial fields */
   updateRequest: (partial: Partial<HttpRequest>) => void;
-  /** 设置响应 */
+  /** Set response */
   setResponse: (response: HttpResponse | null) => void;
-  /** 设置加载状态 */
+  /** Set loading state */
   setLoading: (loading: boolean) => void;
-  /** 设置错误 */
+  /** Set error */
   setError: (error: string | null) => void;
-  /** 设置历史记录 */
+  /** Set history */
   setHistory: (history: HistoryEntry[]) => void;
-  /** 添加历史记录 */
+  /** Add history entry */
   addHistory: (entry: HistoryEntry) => void;
-  /** 删除单条历史记录 */
+  /** Remove single history entry */
   removeHistory: (id: string) => void;
-  /** 清空历史记录 */
+  /** Clear history */
   clearHistory: () => void;
-  /** 设置变量 */
+  /** Set variables */
   setVariables: (variables: Variable[]) => void;
-  /** 重置状态 */
+  /** Reset state */
   reset: () => void;
 }
 
 /**
- * 生成请求的唯一标识（用于判断是否相同请求）
+ * Generate unique key for request (used to check if same request)
  */
 function getRequestKey(request: HttpRequest): string {
   const sortedHeaders = [...request.headers]
@@ -65,7 +65,7 @@ function getRequestKey(request: HttpRequest): string {
 }
 
 /**
- * 全局状态管理
+ * Global state management
  */
 export const useStore = create<AppState>((set) => ({
   currentRequest: { ...DEFAULT_REQUEST, id: generateId() },
@@ -117,13 +117,13 @@ export const useStore = create<AppState>((set) => ({
       let newHistory: HistoryEntry[];
 
       if (existingIndex >= 0) {
-        // 更新现有记录并移到最前面
+        // Update existing entry and move to front
         newHistory = [...state.history];
         newHistory[existingIndex] = { ...newHistory[existingIndex], response: entry.response, timestamp: entry.timestamp };
         const updated = newHistory.splice(existingIndex, 1)[0];
         newHistory.unshift(updated);
       } else {
-        // 添加新记录
+        // Add new entry
         newHistory = [entry, ...state.history].slice(0, 100);
       }
 
@@ -149,7 +149,7 @@ export const useStore = create<AppState>((set) => ({
 }));
 
 /**
- * 生成唯一ID
+ * Generate unique ID
  */
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;

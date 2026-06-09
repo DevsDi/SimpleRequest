@@ -2,11 +2,11 @@ import React from 'react';
 import './HeadersViewer.scss';
 
 /**
- * 响应头查看器组件
- * 展示HTTP响应头列表
+ * Response headers viewer component
+ * Displays HTTP response headers list
  */
 interface HeadersViewerProps {
-  /** 响应头对象 */
+  /** Response headers object */
   headers: Record<string, string>;
 }
 
@@ -14,7 +14,7 @@ const HeadersViewer: React.FC<HeadersViewerProps> = ({ headers }) => {
   const headerEntries = Object.entries(headers);
 
   if (headerEntries.length === 0) {
-    return <div className="headers-viewer empty">响应头为空</div>;
+    return <div className="headers-viewer empty">No headers</div>;
   }
 
   return (
@@ -22,8 +22,8 @@ const HeadersViewer: React.FC<HeadersViewerProps> = ({ headers }) => {
       <table className="headers-table">
         <thead>
           <tr>
-            <th>名称</th>
-            <th>值</th>
+            <th>Name</th>
+            <th>Value</th>
           </tr>
         </thead>
         <tbody>

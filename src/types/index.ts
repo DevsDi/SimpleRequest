@@ -1,15 +1,15 @@
 /**
- * HTTP请求方法类型
+ * HTTP request method types
  */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 
 /**
- * 认证类型
+ * Authentication types
  */
 export type AuthType = 'no-auth' | 'api-key' | 'bearer-token' | 'basic-auth' | 'digest-auth' | 'oauth2';
 
 /**
- * API Key 配置
+ * API Key configuration
  */
 export interface ApiKeyConfig {
   key: string;
@@ -18,14 +18,14 @@ export interface ApiKeyConfig {
 }
 
 /**
- * Bearer Token 配置
+ * Bearer Token configuration
  */
 export interface BearerTokenConfig {
   token: string;
 }
 
 /**
- * Basic Auth 配置
+ * Basic Auth configuration
  */
 export interface BasicAuthConfig {
   username: string;
@@ -33,7 +33,7 @@ export interface BasicAuthConfig {
 }
 
 /**
- * OAuth2 配置
+ * OAuth2 configuration
  */
 export interface OAuth2Config {
   accessToken: string;
@@ -41,7 +41,7 @@ export interface OAuth2Config {
 }
 
 /**
- * 认证配置
+ * Authentication configuration
  */
 export interface AuthConfig {
   type: AuthType;
@@ -52,31 +52,31 @@ export interface AuthConfig {
 }
 
 /**
- * 变量定义
+ * Variable definition
  */
 export interface Variable {
-  /** 变量名称 */
+  /** Variable name */
   name: string;
-  /** 变量值 */
+  /** Variable value */
   value: string;
-  /** 是否启用 */
+  /** Whether enabled */
   enabled: boolean;
 }
 
 /**
- * 请求头项
+ * Header item
  */
 export interface Header {
-  /** 头名称 */
+  /** Header name */
   key: string;
-  /** 头值 */
+  /** Header value */
   value: string;
-  /** 是否启用 */
+  /** Whether enabled */
   enabled: boolean;
 }
 
 /**
- * 请求体类型
+ * Request body types
  */
 export type BodyType = 'none' | 'form-data' | 'x-www-form-urlencoded' | 'raw';
 
@@ -84,94 +84,94 @@ export type BodyType = 'none' | 'form-data' | 'x-www-form-urlencoded' | 'raw';
 export type RawContentType = 'json' | 'text' | 'xml' | 'html' | 'javascript';
 
 /**
- * 请求体配置
+ * Request body configuration
  */
 export interface RequestBody {
-  /** 类型 */
+  /** Type */
   type: BodyType;
-  /** 内容 */
+  /** Content */
   content: string;
   /** Raw subtype (only when type='raw') */
   rawType?: RawContentType;
 }
 
 /**
- * HTTP请求配置
+ * HTTP request configuration
  */
 export interface HttpRequest {
-  /** 唯一标识 */
+  /** Unique identifier */
   id: string;
-  /** 请求名称 */
+  /** Request name */
   name: string;
-  /** HTTP方法 */
+  /** HTTP method */
   method: HttpMethod;
-  /** 请求URL */
+  /** Request URL */
   url: string;
-  /** 请求头列表 */
+  /** Headers list */
   headers: Header[];
-  /** 请求体 */
+  /** Request body */
   body: RequestBody;
-  /** 认证配置 */
+  /** Authentication config */
   auth: AuthConfig;
-  /** 超时时间(ms) */
+  /** Timeout in milliseconds */
   timeout?: number;
-  /** 创建时间 */
+  /** Creation time */
   createdAt: number;
-  /** 更新时间 */
+  /** Update time */
   updatedAt: number;
 }
 
 /**
- * HTTP响应
+ * HTTP response
  */
 export interface HttpResponse {
-  /** 状态码 */
+  /** Status code */
   status: number;
-  /** 状态文本 */
+  /** Status text */
   statusText: string;
-  /** 响应头 */
+  /** Response headers */
   headers: Record<string, string>;
-  /** 响应体 */
+  /** Response body */
   body: string;
-  /** 响应时间(ms) */
+  /** Response time in milliseconds */
   time: number;
-  /** 响应大小(bytes) */
+  /** Response size in bytes */
   size: number;
 }
 
 /**
- * 历史记录条目
+ * History entry
  */
 export interface HistoryEntry {
-  /** 唯一标识 */
+  /** Unique identifier */
   id: string;
-  /** 请求配置 */
+  /** Request configuration */
   request: HttpRequest;
-  /** 响应数据 */
+  /** Response data */
   response: HttpResponse | null;
-  /** 时间戳 */
+  /** Timestamp */
   timestamp: number;
 }
 
 /**
- * 导出数据格式
+ * Export data format
  */
 export interface ExportData {
-  /** 版本 */
+  /** Version */
   version: string;
-  /** 导出时间 */
+  /** Export time */
   exportedAt: number;
-  /** 历史记录 */
+  /** History records */
   history: HistoryEntry[];
 }
 
 /**
- * 消息类型 - popup发送给background
+ * Message types - popup to background
  */
 export type MessageType = 'executeRequest' | 'getHistory' | 'clearHistory';
 
 /**
- * 请求执行消息
+ * Request execution message
  */
 export interface ExecuteRequestMessage {
   type: 'executeRequest';
@@ -179,7 +179,7 @@ export interface ExecuteRequestMessage {
 }
 
 /**
- * 消息响应
+ * Message response
  */
 export interface MessageResponse {
   success: boolean;

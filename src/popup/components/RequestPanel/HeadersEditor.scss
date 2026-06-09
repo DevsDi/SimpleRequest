@@ -1,4 +1,4 @@
-/** HeadersEditor样式 */
+/** HeadersEditor styles */
 
 .headers-editor {
   display: flex;
@@ -7,7 +7,7 @@
   height: 100%;
 }
 
-/** 预设快捷按钮 */
+/** Preset quick buttons */
 .preset-headers {
   display: flex;
   align-items: center;
@@ -33,7 +33,7 @@
   }
 }
 
-/** 请求头列表 */
+/** Headers list */
 .headers-list {
   display: flex;
   flex-direction: column;
@@ -42,7 +42,7 @@
   overflow-y: auto;
   overflow-x: visible;
   min-height: 0;
-  padding-bottom: 220px; // 为下拉列表留空间
+  padding-bottom: 220px; // Space for dropdown list
 }
 
 .header-row {
@@ -60,7 +60,7 @@
   margin-top: 4px;
 }
 
-/** key输入框包装 - 用于联想下拉 */
+/** Key input wrapper - for autocomplete dropdown */
 .header-key-wrapper {
   position: relative;
   width: 180px;
@@ -82,7 +82,7 @@
   }
 }
 
-/** 联想下拉列表 */
+/** Autocomplete dropdown list */
 .header-suggestions {
   position: absolute;
   top: calc(100% + 2px);
@@ -161,7 +161,7 @@
   }
 }
 
-/** 空状态 */
+/** Empty state */
 .empty-hint {
   color: var(--text-muted);
   font-size: 12px;
@@ -169,7 +169,7 @@
   text-align: center;
 }
 
-/** 添加按钮 */
+/** Add button */
 .add-header-btn {
   margin-top: 4px;
   flex-shrink: 0;

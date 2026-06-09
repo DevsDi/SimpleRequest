@@ -2,18 +2,18 @@ import React from 'react';
 import './MethodSelector.scss';
 
 /**
- * HTTP方法选择器组件
- * 下拉选择HTTP请求方法
+ * HTTP method selector component
+ * Dropdown to select HTTP request method
  */
 interface MethodSelectorProps {
-  /** 当前选中的方法 */
+  /** Currently selected method */
   value: string;
-  /** 方法变化回调 */
+  /** Method change callback */
   onChange: (method: string) => void;
 }
 
 const MethodSelector: React.FC<MethodSelectorProps> = ({ value, onChange }) => {
-  /** 方法颜色映射 */
+  /** Method color mapping */
   const methodColors: Record<string, string> = {
     GET: 'var(--method-get)',
     POST: 'var(--method-post)',

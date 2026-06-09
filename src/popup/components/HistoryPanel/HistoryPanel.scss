@@ -1,4 +1,4 @@
-/** HistoryPanel样式 */
+/** HistoryPanel styles */
 
 .history-panel {
   display: flex;
@@ -16,7 +16,7 @@
   font-size: 12px;
 }
 
-/** 标题栏 */
+/** Title bar */
 .history-header {
   display: flex;
   justify-content: space-between;
@@ -45,7 +45,7 @@
   }
 }
 
-/** 历史列表 */
+/** History list */
 .history-list {
   flex: 1;
   overflow-y: auto;
