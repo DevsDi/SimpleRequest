@@ -13,8 +13,8 @@ import './App.scss';
  */
 const App: React.FC = () => {
   const { isLoading, error, setHistory, variables, setVariables } = useStore();
-  // Request section height
-  const [requestHeight, setRequestHeight] = useState(280);
+  // Request section height (null = use CSS flex default 50:50)
+  const [requestHeight, setRequestHeight] = useState<number | null>(null);
   const [isDraggingH, setIsDraggingH] = useState(false);
   // Sidebar width
   const [sidebarWidth, setSidebarWidth] = useState(300);
@@ -32,11 +32,22 @@ const App: React.FC = () => {
     };
     loadHistory();
 
-    // Load saved settings
+    // Load saved settings (only if user has previously adjusted)
     const savedHeight = localStorage.getItem('requestHeight');
     const savedWidth = localStorage.getItem('sidebarWidth');
-    if (savedHeight) setRequestHeight(parseInt(savedHeight));
-    if (savedWidth) setSidebarWidth(parseInt(savedWidth));
+    // Validate saved height (must be valid number >= 120)
+    if (savedHeight) {
+      const h = parseInt(savedHeight, 10);
+      if (!isNaN(h) && h >= 120) {
+        setRequestHeight(h);
+      }
+    }
+    if (savedWidth) {
+      const w = parseInt(savedWidth, 10);
+      if (!isNaN(w) && w >= 150) {
+        setSidebarWidth(w);
+      }
+    }
   }, [setHistory]);
 
   /** Load variables */
@@ -69,14 +80,18 @@ const App: React.FC = () => {
       if (!container) return;
       const rect = container.getBoundingClientRect();
       const newHeight = e.clientY - rect.top;
-      if (newHeight >= 120 && newHeight <= rect.height - 100) {
+      const minHeight = 120;
+      const maxHeight = rect.height - 100;
+      if (newHeight >= minHeight && newHeight <= maxHeight) {
         setRequestHeight(newHeight);
       }
     };
 
     const handleMouseUp = () => {
       setIsDraggingH(false);
-      localStorage.setItem('requestHeight', requestHeight.toString());
+      if (requestHeight) {
+        localStorage.setItem('requestHeight', requestHeight.toString());
+      }
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -172,7 +187,7 @@ const App: React.FC = () => {
           {/* Request panel */}
           <section
             className="request-section"
-            style={{ height: requestHeight, minHeight: requestHeight }}
+            style={requestHeight ? { height: requestHeight, minHeight: requestHeight } : undefined}
           >
             <RequestPanel />
           </section>

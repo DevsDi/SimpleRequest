@@ -1,13 +1,13 @@
 import { HistoryEntry, ExportData, Variable } from '@/types';
 
 /**
- * 存储服务
- * 封装chrome.storage操作,提供数据持久化功能
+ * Storage service
+ * Wraps chrome.storage operations, provides data persistence functionality
  */
 class StorageService {
   /**
-   * 获取历史记录
-   * @returns 历史记录列表
+   * Get history records
+   * @returns History list
    */
   async getHistory(): Promise<HistoryEntry[]> {
     const { history } = await chrome.storage.local.get({ history: [] });
@@ -15,23 +15,23 @@ class StorageService {
   }
 
   /**
-   * 设置历史记录
-   * @param history 历史记录列表
+   * Set history records
+   * @param history History list
    */
   async setHistory(history: HistoryEntry[]): Promise<void> {
     await chrome.storage.local.set({ history });
   }
 
   /**
-   * 清空历史记录
+   * Clear history records
    */
   async clearHistory(): Promise<void> {
     await chrome.storage.local.set({ history: [] });
   }
 
   /**
-   * 导出数据为JSON
-   * @returns JSON字符串
+   * Export data as JSON
+   * @returns JSON string
    */
   async exportData(): Promise<string> {
     const history = await this.getHistory();
@@ -44,8 +44,8 @@ class StorageService {
   }
 
   /**
-   * 导入JSON数据
-   * @param json JSON字符串
+   * Import JSON data
+   * @param json JSON string
    */
   async importData(json: string): Promise<void> {
     try {
@@ -54,13 +54,13 @@ class StorageService {
         await this.setHistory(data.history);
       }
     } catch {
-      throw new Error('导入数据格式无效');
+      throw new Error('Invalid import data format');
     }
   }
 
   /**
-   * 获取变量列表
-   * @returns 变量列表
+   * Get variables list
+   * @returns Variables list
    */
   async getVariables(): Promise<Variable[]> {
     const { variables } = await chrome.storage.local.get({ variables: [] });
@@ -68,8 +68,8 @@ class StorageService {
   }
 
   /**
-   * 设置变量列表
-   * @param variables 变量列表
+   * Set variables list
+   * @param variables Variables list
    */
   async setVariables(variables: Variable[]): Promise<void> {
     await chrome.storage.local.set({ variables });

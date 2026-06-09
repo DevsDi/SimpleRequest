@@ -1,4 +1,4 @@
-/** ResponsePanel样式 */
+/** ResponsePanel styles */
 
 .response-panel {
   display: flex;
@@ -18,7 +18,7 @@
   font-size: 14px;
 }
 
-/** 状态栏 */
+/** Status bar */
 .status-bar {
   display: flex;
   gap: 12px;
@@ -36,7 +36,7 @@
   font-size: 12px;
 }
 
-/** Tab切换 */
+/** Tab switcher */
 .response-tabs {
   display: flex;
   gap: 4px;
@@ -91,7 +91,7 @@
   }
 }
 
-/** 响应内容 - 填充剩余空间 */
+/** Response content - fill remaining space */
 .response-content {
   flex: 1;
   min-height: 0;

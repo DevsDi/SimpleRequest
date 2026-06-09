@@ -2,50 +2,50 @@ import { HttpRequest, Variable } from '@/types';
 import { VARIABLE_REGEX, HTTP_DOMAIN_PREFIXES } from '@/utils/constants';
 
 /**
- * 变量服务
- * 处理变量的替换和 URL 协议智能判断
+ * Variable service
+ * Handles variable replacement and smart URL protocol detection
  */
 class VariableService {
   /**
-   * 替换字符串中的变量
-   * @param text 包含 {{变量名}} 的文本
-   * @param variables 变量列表
-   * @returns 替换后的文本
+   * Replace variables in string
+   * @param text Text containing {{variableName}} placeholders
+   * @param variables Variable list
+   * @returns Replaced text
    */
   replaceVariables(text: string, variables: Variable[]): string {
     if (!text || variables.length === 0) {
       return text;
     }
 
-    // 只处理启用的变量
+    // Only process enabled variables
     const enabledVars = variables.filter((v) => v.enabled && v.name.trim());
 
     return text.replace(VARIABLE_REGEX, (match, varName) => {
       const trimmedName = varName.trim();
       const variable = enabledVars.find((v) => v.name === trimmedName);
-      return variable ? variable.value : match; // 未找到变量则保留原样
+      return variable ? variable.value : match; // Keep original if variable not found
     });
   }
 
   /**
-   * 智能添加协议
-   * @param url 用户输入的 URL
-   * @returns 完整 URL（带协议）
+   * Smart add protocol
+   * @param url User input URL
+   * @returns Complete URL (with protocol)
    */
   normalizeUrl(url: string): string {
     if (!url) {
       return url;
     }
 
-    // 已有协议，直接返回
+    // Already has protocol, return directly
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
 
-    // 提取域名部分（去掉路径和端口）
+    // Extract domain part (remove path and port)
     const domainPart = url.split('/')[0].split(':')[0];
 
-    // localhost/内网IP → http
+    // localhost/internal IP -> http
     const shouldUseHttp = HTTP_DOMAIN_PREFIXES.some((prefix) =>
       domainPart === prefix || domainPart.startsWith(prefix)
     );
@@ -54,10 +54,10 @@ class VariableService {
   }
 
   /**
-   * 处理请求中的所有变量（URL、Headers、Body）
-   * @param request 原始请求
-   * @param variables 变量列表
-   * @returns 替换后的请求（深拷贝）
+   * Process all variables in request (URL, Headers, Body)
+   * @param request Original request
+   * @param variables Variable list
+   * @returns Replaced request (deep copy)
    */
   processRequest(request: HttpRequest, variables: Variable[]): HttpRequest {
     // Deep copy request to avoid mutating original

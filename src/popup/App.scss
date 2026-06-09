@@ -1,4 +1,4 @@
-/** App布局样式 */
+/** App layout styles */
 
 .app {
   display: flex;
@@ -7,7 +7,7 @@
   background: var(--bg-primary);
 }
 
-/** 顶部栏 */
+/** Header bar */
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -47,7 +47,7 @@
   }
 }
 
-/** 主内容 - 左右布局 */
+/** Main content - left-right layout */
 .app-main {
   display: flex;
   flex: 1;
@@ -55,7 +55,7 @@
   overflow: hidden;
 }
 
-/** 侧边栏 - 历史记录 */
+/** Sidebar - history */
 .app-sidebar {
   flex-shrink: 0;
   min-width: 150px;
@@ -64,7 +64,7 @@
   flex-direction: column;
 }
 
-/** 侧边栏 Tabs */
+/** Sidebar Tabs */
 .sidebar-tabs {
   display: flex;
   padding: 8px;
@@ -95,13 +95,13 @@
   }
 }
 
-/** 侧边栏内容区域 */
+/** Sidebar content area */
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
 }
 
-/** 侧边栏垂直分割线 */
+/** Sidebar vertical divider */
 .resize-handle-v {
   width: 6px;
   flex-shrink: 0;
@@ -118,7 +118,7 @@
   }
 }
 
-/** 右侧主区域 - 上下布局 */
+/** Right main area - top-bottom layout */
 .app-content {
   flex: 1;
   display: flex;
@@ -129,8 +129,9 @@
   background: var(--bg-primary);
 }
 
-/** 请求区域 - 可调整高度 */
+/** Request area - resizable height, default 50% */
 .request-section {
+  flex: 1;
   flex-shrink: 0;
   min-height: 120px;
   padding: 10px 16px;
@@ -138,7 +139,7 @@
   overflow: auto;
 }
 
-/** 水平分割线 */
+/** Horizontal divider */
 .resize-handle-h {
   height: 8px;
   flex-shrink: 0;
@@ -166,10 +167,11 @@
   transition: background 0.2s;
 }
 
-/** 响应区域 - 填充剩余 */
+/** Response area - fill remaining, default 50% */
 .response-section {
   flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
+  min-height: 100px;
   display: flex;
   flex-direction: column;
   padding: 10px 16px;
@@ -177,7 +179,7 @@
   background: var(--bg-primary);
 }
 
-/** 按钮样式 */
+/** Button styles */
 .btn {
   padding: 8px 16px;
   border: none;
@@ -209,7 +211,7 @@
   }
 }
 
-/** 加载状态 */
+/** Loading state */
 .loading {
   display: flex;
   justify-content: center;
@@ -234,7 +236,7 @@
   to { transform: rotate(360deg); }
 }
 
-/** 错误提示 */
+/** Error message */
 .error-message {
   padding: 10px 12px;
   background: rgba(239, 68, 68, 0.15);
@@ -244,7 +246,7 @@
   margin-bottom: 12px;
 }
 
-/** 按钮样式 */
+/** Button styles */
 .btn {
   padding: 8px 16px;
   border: none;
@@ -283,7 +285,7 @@
   }
 }
 
-/** 加载状态 */
+/** Loading state */
 .loading {
   display: flex;
   justify-content: center;
@@ -308,7 +310,7 @@
   to { transform: rotate(360deg); }
 }
 
-/** 错误提示 */
+/** Error message */
 .error-message {
   padding: 12px 16px;
   background: rgba(239, 68, 68, 0.15);
@@ -325,7 +327,7 @@
   content: '⚠️';
 }
 
-/** 弹窗样式 */
+/** Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;

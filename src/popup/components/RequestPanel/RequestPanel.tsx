@@ -69,10 +69,10 @@ const RequestPanel: React.FC = () => {
     setResponse(null);
 
     try {
-      // 处理变量替换
+      // Process variable substitution
       const processedRequest = variableService.processRequest(currentRequest, variables);
 
-      // 智能添加协议
+      // Smart add protocol
       processedRequest.url = variableService.normalizeUrl(processedRequest.url);
 
       // Update request name
@@ -86,7 +86,7 @@ const RequestPanel: React.FC = () => {
       const response = await requestService.execute(request);
       setResponse(response);
 
-      // Save to history (使用原始请求，保留变量引用)
+      // Save to history (use original request to preserve variable references)
       await requestService.saveToHistory(currentRequest, response);
       addHistory({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,

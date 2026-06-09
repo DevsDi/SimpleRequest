@@ -1,11 +1,11 @@
 /**
  * Background Service Worker
- * 处理跨域HTTP请求和消息传递
+ * Handles cross-origin HTTP requests and message passing
  */
 
 import { ExecuteRequestMessage, HttpResponse, AuthConfig } from '@/types';
 
-// 点击图标打开新标签页
+// Open new tab when extension icon is clicked
 chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({
     url: chrome.runtime.getURL('src/popup/popup.html'),
@@ -13,12 +13,12 @@ chrome.action.onClicked.addListener(() => {
 });
 
 /**
- * 监听来自popup的消息
+ * Listen for messages from popup
  */
 chrome.runtime.onMessage.addListener(
   (message: ExecuteRequestMessage, _sender, sendResponse) => {
     if (message.type === 'executeRequest') {
-      // 异步处理请求
+      // Handle request asynchronously
       executeRequest(message.request)
         .then((response) => {
           sendResponse({ success: true, data: response });
@@ -27,14 +27,14 @@ chrome.runtime.onMessage.addListener(
           sendResponse({ success: false, error: error.message });
         });
 
-      // 返回true表示异步响应
+      // Return true to indicate async response
       return true;
     }
   }
 );
 
 /**
- * 根据认证配置生成请求头
+ * Generate request headers from auth configuration
  */
 function buildAuthHeaders(auth: AuthConfig): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -46,7 +46,7 @@ function buildAuthHeaders(auth: AuthConfig): Record<string, string> {
   switch (auth.type) {
     case 'api-key':
       if (auth.apiKey?.key && auth.apiKey?.value) {
-        // API Key 添加到 header
+        // API Key added to header
         headers[auth.apiKey.key] = auth.apiKey.value;
       }
       break;
@@ -76,7 +76,7 @@ function buildAuthHeaders(auth: AuthConfig): Record<string, string> {
 }
 
 /**
- * 根据认证配置修改 URL（添加 query 参数）
+ * Modify URL based on auth configuration (add query parameters)
  */
 function applyAuthToUrl(url: string, auth: AuthConfig): string {
   if (!auth || auth.type !== 'api-key') {
@@ -92,7 +92,7 @@ function applyAuthToUrl(url: string, auth: AuthConfig): string {
 }
 
 /**
- * 智能添加默认请求头
+ * Smart add default request headers
  */
 function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -147,13 +147,13 @@ function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): R
     }
   }
 
-  // Accept: 默认接受JSON
+  // Accept: default to accept JSON
   const acceptKey = 'accept';
   if (!headers[acceptKey]) {
     headers[acceptKey] = 'application/json, text/plain, */*';
   }
 
-  // User-Agent: 添加标识
+  // User-Agent: add identifier
   const userAgentKey = 'user-agent';
   if (!headers[userAgentKey]) {
     headers[userAgentKey] = 'SimpleRequest/1.0.0';
@@ -163,7 +163,7 @@ function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): R
 }
 
 /**
- * 解析 form-data 内容为 FormData 对象
+ * Parse form-data content to FormData object
  * Supports file entries: key=@filename;type=mimetype;base64,data
  */
 function parseFormDataContent(content: string): FormData {
@@ -218,7 +218,7 @@ function parseFormDataContent(content: string): FormData {
 }
 
 /**
- * 解析 x-www-form-urlencoded 内容为 URLSearchParams
+ * Parse x-www-form-urlencoded content to URLSearchParams
  */
 function parseUrlencodedContent(content: string): URLSearchParams {
   const params = new URLSearchParams();
@@ -236,16 +236,16 @@ function parseUrlencodedContent(content: string): URLSearchParams {
 }
 
 /**
- * 执行HTTP请求
+ * Execute HTTP request
  */
 async function executeRequest(request: HttpRequestInternal): Promise<HttpResponse> {
   const startTime = Date.now();
 
   try {
-    // 应用认证到 URL（API Key query 参数）
+    // Apply auth to URL (API Key query parameter)
     let url = applyAuthToUrl(request.url, request.auth);
 
-    // 构建请求体
+    // Build request body
     let body: string | FormData | URLSearchParams | undefined = undefined;
     let hasFormDataBody = false;
 
@@ -267,10 +267,10 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
       }
     }
 
-    // 构建请求头（包含认证）
+    // Build request headers (including auth)
     const headers = buildHeaders(request, hasFormDataBody);
 
-    // 发起请求
+    // Send request
     const response = await fetch(url, {
       method: request.method,
       headers,
@@ -279,7 +279,7 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
 
     const endTime = Date.now();
 
-    // 解析响应
+    // Parse response
     const responseBody = await response.text();
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
@@ -295,12 +295,12 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
       size: responseBody.length,
     };
   } catch (error: any) {
-    throw new Error(error.message || '请求失败');
+    throw new Error(error.message || 'Request failed');
   }
 }
 
 /**
- * HTTP请求类型(background内部使用)
+ * HTTP request type (internal use in background)
  */
 interface HttpRequestInternal {
   method: string;

@@ -5,7 +5,7 @@ import './VariablesPanel.scss';
 
 /**
  * Variables panel component
- * 变量管理面板，用于添加/编辑/删除变量
+ * Variable management panel for adding/editing/deleting variables
  */
 const VariablesPanel: React.FC = () => {
   const { variables, setVariables } = useStore();
@@ -13,7 +13,7 @@ const VariablesPanel: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [newValue, setNewValue] = useState('');
 
-  /** 添加新变量 */
+  /** Add new variable */
   const handleAdd = () => {
     if (!newName.trim()) return;
 
@@ -28,7 +28,7 @@ const VariablesPanel: React.FC = () => {
     setNewValue('');
   };
 
-  /** 删除变量 */
+  /** Delete variable */
   const handleDelete = (index: number) => {
     const newVars = variables.filter((_, i) => i !== index);
     setVariables(newVars);
@@ -37,7 +37,7 @@ const VariablesPanel: React.FC = () => {
     }
   };
 
-  /** 切换变量启用状态 */
+  /** Toggle variable enabled state */
   const handleToggle = (index: number) => {
     const newVars = variables.map((v, i) =>
       i === index ? { ...v, enabled: !v.enabled } : v
@@ -45,12 +45,12 @@ const VariablesPanel: React.FC = () => {
     setVariables(newVars);
   };
 
-  /** 开始编辑变量 */
+  /** Start editing variable */
   const handleEdit = (index: number) => {
     setEditingIndex(index);
   };
 
-  /** 保存编辑 */
+  /** Save edit */
   const handleSaveEdit = (index: number, name: string, value: string) => {
     const newVars = variables.map((v, i) =>
       i === index ? { ...v, name: name.trim(), value } : v
@@ -59,7 +59,7 @@ const VariablesPanel: React.FC = () => {
     setEditingIndex(null);
   };
 
-  /** 取消编辑 */
+  /** Cancel edit */
   const handleCancelEdit = () => {
     setEditingIndex(null);
   };
@@ -71,12 +71,12 @@ const VariablesPanel: React.FC = () => {
         <span className="count">{variables.length}</span>
       </div>
 
-      {/* 添加新变量 */}
+      {/* Add new variable */}
       <div className="add-variable">
         <input
           type="text"
           className="var-name-input"
-          placeholder="变量名"
+          placeholder="Variable name"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
@@ -84,7 +84,7 @@ const VariablesPanel: React.FC = () => {
         <input
           type="text"
           className="var-value-input"
-          placeholder="变量值"
+          placeholder="Variable value"
           value={newValue}
           onChange={(e) => setNewValue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
@@ -94,12 +94,12 @@ const VariablesPanel: React.FC = () => {
         </button>
       </div>
 
-      {/* 变量列表 */}
+      {/* Variable list */}
       <div className="variables-list">
         {variables.length === 0 && (
           <div className="empty-hint">
-            <p>暂无变量</p>
-            <p className="tip">使用 {'{{'}变量名{'}}'} 语法引用变量</p>
+            <p>No variables</p>
+            <p className="tip">Use {'{{'}variableName{'}}'} syntax to reference variables</p>
           </div>
         )}
 
@@ -109,7 +109,7 @@ const VariablesPanel: React.FC = () => {
             className={`variable-item ${variable.enabled ? 'enabled' : 'disabled'} ${editingIndex === index ? 'editing' : ''}`}
           >
             {editingIndex === index ? (
-              // 编辑模式
+              // Edit mode
               <>
                 <input
                   type="text"
@@ -155,7 +155,7 @@ const VariablesPanel: React.FC = () => {
                 </button>
               </>
             ) : (
-              // 显示模式
+              // Display mode
               <>
                 <input
                   type="checkbox"

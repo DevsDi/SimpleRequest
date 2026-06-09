@@ -1,7 +1,7 @@
 import { HttpMethod, Header, RequestBody, HttpRequest, AuthConfig, RawContentType } from '@/types';
 
 /**
- * curl命令解析结果
+ * curl command parse result
  */
 interface CurlParseResult {
   method: HttpMethod;
@@ -12,21 +12,21 @@ interface CurlParseResult {
 }
 
 /**
- * curl命令解析器
- * 将curl命令转换为请求配置
+ * curl command parser
+ * Converts curl command to request configuration
  */
 class CurlParser {
   /**
-   * 解析curl命令
-   * @param command curl命令字符串
-   * @returns 请求配置
+   * Parse curl command
+   * @param command curl command string
+   * @returns Request configuration
    */
   parse(command: string): HttpRequest {
     const result = this.parseCurl(command);
 
     return {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      name: result.url.split('/').pop() || 'curl导入',
+      name: result.url.split('/').pop() || 'curl import',
       method: result.method,
       url: result.url,
       headers: result.headers,
@@ -38,16 +38,16 @@ class CurlParser {
   }
 
   /**
-   * 内部解析方法
+   * Internal parse method
    */
   private parseCurl(command: string): CurlParseResult {
-    // 清理命令(移除换行和多余空格)
+    // Clean command (remove newlines and extra spaces)
     const cleaned = this.normalizeCommand(command);
 
-    // 分词(处理引号)
+    // Tokenize (handle quotes)
     const tokens = this.tokenize(cleaned);
 
-    // 解析参数
+    // Parse arguments
     const result: CurlParseResult = {
       method: 'GET',
       url: '',
@@ -88,7 +88,7 @@ class CurlParser {
             content: bodyContent,
             rawType: bodyType === 'raw' ? this.detectRawType(result.headers, bodyContent) : undefined,
           };
-          // 如果没有指定方法,有body时默认POST
+          // If no method specified, default to POST when body is present
           if (result.method === 'GET') {
             result.method = 'POST';
           }
@@ -109,7 +109,7 @@ class CurlParser {
           break;
 
         default:
-          // URL识别
+          // URL recognition
           if (token.startsWith('http://') || token.startsWith('https://')) {
             result.url = token;
           } else if (!result.url && token.includes('.') && !token.startsWith('-') && !token.startsWith('curl')) {
@@ -125,34 +125,34 @@ class CurlParser {
   }
 
   /**
-   * 清理命令
-   * 只移除 curl 续行的反斜杠，保留 JSON 内容中的转义字符
+   * Clean command
+   * Only remove curl line continuation backslashes, preserve escape characters in JSON content
    */
   private normalizeCommand(cmd: string): string {
-    // 移除反斜杠+换行（curl续行符）
-    // 移除行尾的反斜杠
+    // Remove backslash+newline (curl line continuation)
+    // Remove trailing backslashes
     return cmd.replace(/\\\n/g, ' ').replace(/\\(\s*)$/gm, '').trim();
   }
 
   /**
-   * 分词(处理引号，包括 ANSI-C quoting $'...' 格式)
+   * Tokenize (handle quotes, including ANSI-C quoting $'...' format)
    */
   private tokenize(cmd: string): string[] {
     const tokens: string[] = [];
     let current = '';
     let inQuote = false;
     let quoteChar = '';
-    let isAnsiCQuoting = false; // $'...' 格式
+    let isAnsiCQuoting = false; // $'...' format
 
     for (let i = 0; i < cmd.length; i++) {
       const char = cmd[i];
 
-      // 检测 ANSI-C quoting: $'...'
+      // Detect ANSI-C quoting: $'...'
       if (!inQuote && char === '$' && cmd[i + 1] === "'") {
         inQuote = true;
         quoteChar = "'";
         isAnsiCQuoting = true;
-        i++; // 跳过 $
+        i++; // Skip $
         continue;
       }
 
@@ -164,7 +164,7 @@ class CurlParser {
       }
 
       if (inQuote && char === '\\' && isAnsiCQuoting) {
-        // ANSI-C quoting 转义处理
+        // ANSI-C quoting escape handling
         const nextChar = cmd[i + 1];
         if (nextChar === "'") {
           // \' -> '
@@ -172,23 +172,23 @@ class CurlParser {
           i++;
           continue;
         } else if (nextChar === 'u' && cmd.slice(i + 2, i + 6).match(/[0-9a-fA-F]{4}/)) {
-          // \uXXXX -> Unicode 字符
+          // \uXXXX -> Unicode character
           const hex = cmd.slice(i + 2, i + 6);
           current += String.fromCharCode(parseInt(hex, 16));
-          i += 5; // 跳过 \uXXXX
+          i += 5; // Skip \uXXXX
           continue;
         } else if (nextChar === 'n') {
-          // \n -> 换行
+          // \n -> newline
           current += '\n';
           i++;
           continue;
         } else if (nextChar === 't') {
-          // \t -> 制表符
+          // \t -> tab
           current += '\t';
           i++;
           continue;
         } else if (nextChar === 'r') {
-          // \r -> 回车
+          // \r -> carriage return
           current += '\r';
           i++;
           continue;
@@ -198,19 +198,19 @@ class CurlParser {
           i++;
           continue;
         }
-        // 其他情况保留反斜杠
+        // Other cases preserve backslash
         current += char;
         continue;
       }
 
       if (inQuote && char === quoteChar && !isAnsiCQuoting) {
-        // 普通引号结束（非 ANSI-C quoting）
+        // Normal quote end (non ANSI-C quoting)
         inQuote = false;
         quoteChar = '';
         continue;
       }
 
-      // ANSI-C quoting 中单引号需要转义才能出现，所以直接遇到的单引号就是结束
+      // In ANSI-C quoting, single quote must be escaped, so direct single quote means end
       if (inQuote && isAnsiCQuoting && char === "'") {
         inQuote = false;
         quoteChar = '';
@@ -236,7 +236,7 @@ class CurlParser {
   }
 
   /**
-   * 根据请求头检测body类型
+   * Detect body type based on headers
    */
   private detectBodyType(headers: Header[], body: string): RequestBody['type'] {
     const contentType = headers.find(

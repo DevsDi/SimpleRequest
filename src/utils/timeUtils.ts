@@ -1,15 +1,14 @@
 /**
- * 时间格式化工具
+ * Time formatting utilities
  */
 
 /**
- * 格式化时间为本地时间字符串
- * @param timestamp 时间戳(ms)
- * @returns 格式化后的时间字符串 yyyy-MM-dd HH:mm:ss
+ * Format timestamp to local time string
+ * @param timestamp Timestamp in milliseconds
+ * @returns Formatted time string yyyy-MM-dd HH:mm:ss
  */
 export function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
-  // 北京时间 UTC+8
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -20,9 +19,9 @@ export function formatTime(timestamp: number): string {
 }
 
 /**
- * 格式化响应时间
- * @param ms 毫秒数
- * @returns 格式化后的时间字符串
+ * Format response time
+ * @param ms Milliseconds
+ * @returns Formatted time string
  */
 export function formatResponseTime(ms: number): string {
   if (ms < 1000) {
@@ -32,9 +31,9 @@ export function formatResponseTime(ms: number): string {
 }
 
 /**
- * 格式化响应大小
- * @param bytes 字节数
- * @returns 格式化后的大小字符串
+ * Format response size
+ * @param bytes Number of bytes
+ * @returns Formatted size string
  */
 export function formatSize(bytes: number): string {
   if (bytes < 1024) {
