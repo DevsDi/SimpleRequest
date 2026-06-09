@@ -59,7 +59,9 @@
 /** Raw toolbar */
 .raw-toolbar {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-light);
