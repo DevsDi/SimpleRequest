@@ -85,7 +85,7 @@ export const DEFAULT_REQUEST: HttpRequest = {
   method: 'GET',
   url: '',
   headers: [],
-  body: { type: 'none', content: '' },
+  body: { type: 'raw', content: '', rawType: 'json' },
   auth: DEFAULT_AUTH,
   createdAt: Date.now(),
   updatedAt: Date.now(),

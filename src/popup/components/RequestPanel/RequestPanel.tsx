@@ -19,7 +19,7 @@ type RequestTab = 'params' | 'authorization' | 'headers' | 'body';
  */
 const RequestPanel: React.FC = () => {
   const { currentRequest, updateRequest, isLoading, setLoading, setError, setResponse, addHistory, variables } = useStore();
-  const [activeTab, setActiveTab] = useState<RequestTab>('params');
+  const [activeTab, setActiveTab] = useState<RequestTab>('body');
 
   /** Detect pasted content for curl command */
   const handlePaste = (e: React.ClipboardEvent) => {

@@ -35,10 +35,10 @@ const App: React.FC = () => {
     // Load saved settings (only if user has previously adjusted)
     const savedHeight = localStorage.getItem('requestHeight');
     const savedWidth = localStorage.getItem('sidebarWidth');
-    // Validate saved height (must be valid number >= 120)
+    // 校验已保存高度（>= 40 即视为有效）
     if (savedHeight) {
       const h = parseInt(savedHeight, 10);
-      if (!isNaN(h) && h >= 120) {
+      if (!isNaN(h) && h >= 40) {
         setRequestHeight(h);
       }
     }
@@ -72,6 +72,12 @@ const App: React.FC = () => {
     setIsDraggingH(true);
   };
 
+  /** 双击分隔条重置到默认 50:50 */
+  const handleHDoubleClick = () => {
+    setRequestHeight(null);
+    localStorage.removeItem('requestHeight');
+  };
+
   useEffect(() => {
     if (!isDraggingH) return;
 
@@ -80,8 +86,9 @@ const App: React.FC = () => {
       if (!container) return;
       const rect = container.getBoundingClientRect();
       const newHeight = e.clientY - rect.top;
-      const minHeight = 120;
-      const maxHeight = rect.height - 100;
+      // 放宽拖拽边界：上下各保留 40px,基本可拖到极限
+      const minHeight = 40;
+      const maxHeight = rect.height - 40;
       if (newHeight >= minHeight && newHeight <= maxHeight) {
         setRequestHeight(newHeight);
       }
@@ -187,7 +194,11 @@ const App: React.FC = () => {
           {/* Request panel */}
           <section
             className="request-section"
-            style={requestHeight ? { height: requestHeight, minHeight: requestHeight } : undefined}
+            style={
+              requestHeight
+                ? { flex: '0 0 auto', height: requestHeight }
+                : undefined
+            }
           >
             <RequestPanel />
           </section>
@@ -196,6 +207,8 @@ const App: React.FC = () => {
           <div
             className={`resize-handle-h ${isDraggingH ? 'dragging' : ''}`}
             onMouseDown={handleHMouseDown}
+            onDoubleClick={handleHDoubleClick}
+            title="拖动调整高度,双击重置"
           >
             <div className="resize-line-h" />
           </div>
