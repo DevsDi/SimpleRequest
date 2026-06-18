@@ -32,8 +32,8 @@
 }
 
 .donate-header-btn {
-  background: rgba(255, 152, 0, 0.1);
-  border: 1px solid rgba(255, 152, 0, 0.25);
+  background: transparent;
+  border: none;
   border-radius: 8px;
   padding: 4px 10px;
   font-size: 14px;
@@ -41,8 +41,7 @@
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(255, 152, 0, 0.2);
-    border-color: rgba(255, 152, 0, 0.4);
+    background: rgba(255, 152, 0, 0.15);
     transform: scale(1.1);
   }
 }
