@@ -234,7 +234,9 @@ const RequestPanel: React.FC = () => {
   if (!currentRequest) {
     return (
       <div className="request-panel">
-        <div className="empty-state">Loading...</div>
+        <div className="empty-state">
+          <div className="empty-hint">Click + to create a new request</div>
+        </div>
       </div>
     );
   }

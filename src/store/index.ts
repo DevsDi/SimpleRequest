@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { HttpRequest, HttpResponse, HistoryEntry, Variable, Tab, TabsData } from '@/types';
 import { DEFAULT_REQUEST, MAX_TABS } from '@/utils/constants';
+import { normalizeRequest } from '@/utils/requestUtils';
 
 /**
  * 应用状态
@@ -23,6 +24,9 @@ interface AppState {
   addTab: (request?: HttpRequest) => void;
   closeTab: (id: string) => void;
   switchTab: (id: string) => void;
+  duplicateTab: (id: string) => void;
+  closeOtherTabs: (keepId: string) => void;
+  closeAllTabs: () => void;
 
   // Request 操作（针对当前激活 Tab）
   getCurrentRequest: () => HttpRequest | null;
@@ -127,9 +131,14 @@ export const useStore = create<AppState>((set, get) => ({
   // 初始化 Tab（从存储加载）
   initTabs: (data) => {
     if (data.tabs && data.tabs.length > 0) {
+      // 对每个请求应用 normalizeRequest 确保字段完整
+      const normalizedRequests: Record<string, HttpRequest> = {};
+      for (const [id, request] of Object.entries(data.requests)) {
+        normalizedRequests[id] = normalizeRequest(request);
+      }
       set({
         tabs: data.tabs,
-        requests: data.requests,
+        requests: normalizedRequests,
         responses: data.responses || {},
         activeTabId: data.activeTabId,
       });
@@ -162,27 +171,27 @@ export const useStore = create<AppState>((set, get) => ({
 
     // 检查 Tab 数量限制
     if (state.tabs.length >= MAX_TABS) {
-      set({ error: `最多支持 ${MAX_TABS} 个标签页，请关闭部分标签页后再试` });
+      set({ error: `Maximum ${MAX_TABS} tabs allowed. Please close some tabs first.` });
       return;
     }
 
     const id = generateId();
     const now = Date.now();
 
-    // 如果提供了请求配置，使用它；否则复制当前请求或创建默认请求
+    // 如果提供了请求配置，使用 normalizeRequest 确保字段完整
     let newRequest: HttpRequest;
     if (request) {
-      newRequest = { ...request, id, updatedAt: now };
+      newRequest = normalizeRequest({ ...request, id, updatedAt: now });
     } else {
       const currentRequest = state.getCurrentRequest();
       if (currentRequest) {
-        newRequest = {
+        newRequest = normalizeRequest({
           ...currentRequest,
           id,
           name: '',
           createdAt: now,
           updatedAt: now,
-        };
+        });
       } else {
         newRequest = { ...DEFAULT_REQUEST, id, createdAt: now, updatedAt: now };
       }
@@ -207,11 +216,6 @@ export const useStore = create<AppState>((set, get) => ({
   closeTab: (id) => {
     const state = get();
 
-    // 禁止关闭最后一个 Tab
-    if (state.tabs.length <= 1) {
-      return;
-    }
-
     const tabIndex = state.tabs.findIndex(t => t.id === id);
     const newTabs = state.tabs.filter(t => t.id !== id);
 
@@ -224,9 +228,13 @@ export const useStore = create<AppState>((set, get) => ({
     // 如果关闭的是当前激活的 Tab，切换到相邻 Tab
     let newActiveTabId = state.activeTabId;
     if (state.activeTabId === id) {
-      // 优先切换到右侧，否则切换到左侧
-      const newIndex = Math.min(tabIndex, newTabs.length - 1);
-      newActiveTabId = newTabs[newIndex]?.id || null;
+      if (newTabs.length === 0) {
+        newActiveTabId = null;
+      } else {
+        // 优先切换到右侧，否则切换到左侧
+        const newIndex = Math.min(tabIndex, newTabs.length - 1);
+        newActiveTabId = newTabs[newIndex]?.id || null;
+      }
     }
 
     set({
@@ -234,6 +242,8 @@ export const useStore = create<AppState>((set, get) => ({
       requests: newRequests,
       responses: newResponses,
       activeTabId: newActiveTabId,
+      error: null,
+      isLoading: false,
     });
   },
 
@@ -243,6 +253,94 @@ export const useStore = create<AppState>((set, get) => ({
     if (state.tabs.find(t => t.id === id)) {
       set({ activeTabId: id, error: null });
     }
+  },
+
+  // 复制 Tab
+  duplicateTab: (id) => {
+    const state = get();
+
+    // 检查 Tab 数量限制
+    if (state.tabs.length >= MAX_TABS) {
+      set({ error: `Maximum ${MAX_TABS} tabs allowed. Please close some tabs first.` });
+      return;
+    }
+
+    // 检查源 Tab 是否存在
+    const sourceTab = state.tabs.find(t => t.id === id);
+    const sourceRequest = state.requests[id];
+    if (!sourceTab || !sourceRequest) {
+      return;
+    }
+
+    // 生成新 ID
+    const newId = generateId();
+    const now = Date.now();
+
+    // 复制请求配置，使用 normalizeRequest 确保字段完整
+    const newRequest = normalizeRequest({
+      ...sourceRequest,
+      id: newId,
+      name: '',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // 新 Tab 名称加 "(Copy)" 后缀
+    const newTab: Tab = {
+      id: newId,
+      name: `${sourceTab.name} (Copy)`,
+      createdAt: now,
+    };
+
+    set({
+      tabs: [...state.tabs, newTab],
+      requests: { ...state.requests, [newId]: newRequest },
+      responses: { ...state.responses, [newId]: null }, // 新 Tab 不继承响应
+      activeTabId: newId, // 自动切换到新 Tab
+      error: null,
+    });
+  },
+
+  // 关闭其他 Tab
+  closeOtherTabs: (keepId) => {
+    const state = get();
+
+    // 检查保留的 Tab 是否存在
+    const keepTab = state.tabs.find(t => t.id === keepId);
+    if (!keepTab) {
+      return;
+    }
+
+    // 获取要删除的 Tab ID 列表
+    const tabIdsToRemove = state.tabs.filter(t => t.id !== keepId).map(t => t.id);
+
+    // 删除其他 Tab 的 request 和 response
+    const newRequests = { ...state.requests };
+    const newResponses = { ...state.responses };
+    for (const id of tabIdsToRemove) {
+      delete newRequests[id];
+      delete newResponses[id];
+    }
+
+    set({
+      tabs: [keepTab],
+      requests: newRequests,
+      responses: newResponses,
+      activeTabId: keepId, // 确保切换到保留的 Tab
+      error: null,
+    });
+  },
+
+  // 关闭所有 Tab（关闭后只剩 + 按钮）
+  closeAllTabs: () => {
+    set({
+      tabs: [],
+      requests: {},
+      responses: {},
+      activeTabId: null,
+      error: null,
+      isLoading: false,
+    });
   },
 
   // 获取当前请求
@@ -278,24 +376,40 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // 设置当前请求（用于 curl 导入等场景）
+  // 设置当前请求（用于 curl 导入、历史记录点击等场景）
   setCurrentRequest: (request) => {
     const state = get();
-    if (!state.activeTabId) return;
 
-    const updatedRequest = {
+    // 如果没有激活的 Tab，创建一个新 Tab
+    if (!state.activeTabId) {
+      const newId = generateId();
+      const now = Date.now();
+      const newRequest = normalizeRequest({
+        ...request,
+        id: newId,
+        updatedAt: now,
+      });
+      const newTab: Tab = {
+        id: newId,
+        name: generateTabName(newRequest),
+        createdAt: now,
+      };
+
+      set({
+        tabs: [newTab],
+        requests: { [newId]: newRequest },
+        responses: { [newId]: null },
+        activeTabId: newId,
+      });
+      return;
+    }
+
+    // 使用 normalizeRequest 确保所有字段完整
+    const updatedRequest = normalizeRequest({
       ...request,
       id: state.activeTabId,
       updatedAt: Date.now(),
-    };
-
-    // 处理旧版本 'json' body 类型迁移
-    if ((updatedRequest.body?.type as string) === 'json') {
-      updatedRequest.body = { ...updatedRequest.body, type: 'raw' };
-    }
-    if (!updatedRequest.auth) {
-      updatedRequest.auth = { type: 'no-auth' };
-    }
+    });
 
     const newTabName = generateTabName(updatedRequest);
     const newTabs = state.tabs.map(t =>

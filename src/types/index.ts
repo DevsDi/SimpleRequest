@@ -122,6 +122,12 @@ export interface HttpRequest {
 }
 
 /**
+ * 部分请求配置（字段可选）
+ * 用于处理从存储加载或迁移的旧数据可能缺失字段的情况
+ */
+export type PartialHttpRequest = Partial<HttpRequest>;
+
+/**
  * HTTP response
  */
 export interface HttpResponse {

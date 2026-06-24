@@ -85,3 +85,16 @@
     padding: 20px;
   }
 }
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+
+  .empty-hint {
+    font-size: 14px;
+    text-align: center;
+  }
+}

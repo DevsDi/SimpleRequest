@@ -21,6 +21,9 @@ const App: React.FC = () => {
     addTab,
     closeTab,
     switchTab,
+    duplicateTab,
+    closeOtherTabs,
+    closeAllTabs,
     getTabsData,
     getCurrentResponse,
     isLoading,
@@ -99,13 +102,16 @@ const App: React.FC = () => {
 
   /** 自动保存 Tab 数据 */
   useEffect(() => {
-    // 跳过初始加载
-    if (tabs.length === 0) return;
-
     const saveData = () => {
       const data = getTabsData();
       storageService.saveTabsData(data);
     };
+
+    // 空状态也需要保存，确保存储中的旧数据被清除
+    if (tabs.length === 0) {
+      saveData();
+      return;
+    }
 
     // debounce 保存
     const timer = setTimeout(saveData, 300);
@@ -256,6 +262,9 @@ const App: React.FC = () => {
             onAddTab={addTab}
             onCloseTab={closeTab}
             onSwitchTab={switchTab}
+            onDuplicateTab={duplicateTab}
+            onCloseOtherTabs={closeOtherTabs}
+            onCloseAllTabs={closeAllTabs}
           />
 
           {/* Request panel */}

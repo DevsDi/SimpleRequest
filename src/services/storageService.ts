@@ -1,4 +1,5 @@
 import { HistoryEntry, ExportData, Variable, Tab, TabsData, HttpRequest, HttpResponse } from '@/types';
+import { normalizeRequest } from '@/utils/requestUtils';
 
 /**
  * Storage service
@@ -128,11 +129,12 @@ class StorageService {
     const id = currentRequest.id || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const now = Date.now();
 
-    const request: HttpRequest = {
+    // 使用 normalizeRequest 确保所有字段完整
+    const request: HttpRequest = normalizeRequest({
       ...currentRequest,
       id,
       updatedAt: now,
-    };
+    });
 
     // 生成 Tab 名称
     let tabName = request.method || 'GET';
