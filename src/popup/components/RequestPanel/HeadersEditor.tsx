@@ -9,7 +9,11 @@ import './HeadersEditor.scss';
  * Add, edit, delete, enable/disable headers with autocomplete
  */
 const HeadersEditor: React.FC = () => {
-  const { currentRequest, updateRequest } = useStore();
+  const { getCurrentRequest, updateCurrentRequest } = useStore();
+  const currentRequest = getCurrentRequest();
+
+  if (!currentRequest) return null;
+
   const [suggestions, setSuggestions] = useState<typeof HEADER_SUGGESTIONS>([]);
   const [suggestIndex, setSuggestIndex] = useState(0);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -21,14 +25,14 @@ const HeadersEditor: React.FC = () => {
       value: '',
       enabled: true,
     };
-    updateRequest({
+    updateCurrentRequest({
       headers: [...currentRequest.headers, newHeader],
     });
   };
 
   /** Add preset header */
   const addPresetHeader = (header: Header) => {
-    updateRequest({
+    updateCurrentRequest({
       headers: [...currentRequest.headers, { ...header }],
     });
   };
@@ -37,13 +41,13 @@ const HeadersEditor: React.FC = () => {
   const updateHeader = (index: number, field: keyof Header, value: string | boolean) => {
     const newHeaders = [...currentRequest.headers];
     newHeaders[index] = { ...newHeaders[index], [field]: value };
-    updateRequest({ headers: newHeaders });
+    updateCurrentRequest({ headers: newHeaders });
   };
 
   /** Remove header */
   const removeHeader = (index: number) => {
     const newHeaders = currentRequest.headers.filter((_, i) => i !== index);
-    updateRequest({ headers: newHeaders });
+    updateCurrentRequest({ headers: newHeaders });
     setFocusedIndex(null);
     setSuggestions([]);
   };

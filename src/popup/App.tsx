@@ -5,6 +5,7 @@ import RequestPanel from './components/RequestPanel';
 import ResponsePanel from './components/ResponsePanel';
 import HistoryPanel from './components/HistoryPanel';
 import VariablesPanel from './components/VariablesPanel';
+import TabBar from './components/TabBar';
 import DonateModal from './components/DonateModal';
 import './App.scss';
 
@@ -12,7 +13,23 @@ import './App.scss';
  * Main App component
  */
 const App: React.FC = () => {
-  const { isLoading, error, setHistory, variables, setVariables } = useStore();
+  const {
+    tabs,
+    requests,
+    activeTabId,
+    initTabs,
+    addTab,
+    closeTab,
+    switchTab,
+    getTabsData,
+    getCurrentResponse,
+    isLoading,
+    error,
+    setHistory,
+    variables,
+    setVariables,
+  } = useStore();
+
   // Request section height (null = use CSS flex default 50:50)
   const [requestHeight, setRequestHeight] = useState<number | null>(null);
   const [isDraggingH, setIsDraggingH] = useState(false);
@@ -24,18 +41,32 @@ const App: React.FC = () => {
   // Donate modal
   const [showDonate, setShowDonate] = useState(false);
 
-  /** Initialize and load history */
+  /** 初始化加载 */
   useEffect(() => {
-    const loadHistory = async () => {
+    const loadData = async () => {
+      // 加载 Tab 数据
+      const tabsData = await storageService.loadTabsData();
+      if (tabsData) {
+        initTabs(tabsData);
+      } else {
+        // 没有存储数据，初始化默认 Tab
+        initTabs({
+          tabs: [],
+          requests: {},
+          responses: {},
+          activeTabId: null,
+        });
+      }
+
+      // 加载历史记录
       const history = await storageService.getHistory();
       setHistory(history);
     };
-    loadHistory();
+    loadData();
 
-    // Load saved settings (only if user has previously adjusted)
+    // 加载保存的布局设置
     const savedHeight = localStorage.getItem('requestHeight');
     const savedWidth = localStorage.getItem('sidebarWidth');
-    // 校验已保存高度（>= 40 即视为有效）
     if (savedHeight) {
       const h = parseInt(savedHeight, 10);
       if (!isNaN(h) && h >= 40) {
@@ -48,7 +79,7 @@ const App: React.FC = () => {
         setSidebarWidth(w);
       }
     }
-  }, [setHistory]);
+  }, [initTabs, setHistory]);
 
   /** Load variables */
   useEffect(() => {
@@ -65,6 +96,32 @@ const App: React.FC = () => {
       storageService.setVariables(variables);
     }
   }, [variables]);
+
+  /** 自动保存 Tab 数据 */
+  useEffect(() => {
+    // 跳过初始加载
+    if (tabs.length === 0) return;
+
+    const saveData = () => {
+      const data = getTabsData();
+      storageService.saveTabsData(data);
+    };
+
+    // debounce 保存
+    const timer = setTimeout(saveData, 300);
+    return () => clearTimeout(timer);
+  }, [tabs, requests, activeTabId, getTabsData]);
+
+  /** 页面关闭前保存 */
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const data = getTabsData();
+      storageService.saveTabsData(data);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [getTabsData]);
 
   /** Horizontal drag - request/response divider */
   const handleHMouseDown = (e: React.MouseEvent) => {
@@ -154,6 +211,16 @@ const App: React.FC = () => {
         </div>
       </header>
 
+      {/* Tab Bar */}
+      <TabBar
+        tabs={tabs}
+        activeTabId={activeTabId}
+        requests={requests}
+        onAddTab={addTab}
+        onCloseTab={closeTab}
+        onSwitchTab={switchTab}
+      />
+
       {/* Main content */}
       <div className="app-main">
         {/* Left sidebar - history/variables */}
@@ -216,7 +283,9 @@ const App: React.FC = () => {
           {/* Response panel */}
           <section className="response-section">
             {error && <div className="error-message">{error}</div>}
-            {isLoading ? <div className="loading">Loading...</div> : <ResponsePanel />}
+            {isLoading ? <div className="loading">Loading...</div> : (
+              <ResponsePanel response={getCurrentResponse()} />
+            )}
           </section>
         </main>
       </div>

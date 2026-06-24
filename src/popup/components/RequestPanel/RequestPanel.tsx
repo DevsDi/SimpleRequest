@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useStore } from '@/store';
 import { requestService, curlParser, variableService, curlGenerator } from '@/services';
 import MethodSelector from './MethodSelector';
@@ -6,6 +6,7 @@ import HeadersEditor from './HeadersEditor';
 import BodyEditor from './BodyEditor';
 import ParamsEditor from './ParamsEditor';
 import AuthEditor from './AuthEditor';
+import VariableAutocomplete from './VariableAutocomplete';
 import './RequestPanel.scss';
 
 /**
@@ -18,8 +19,44 @@ type RequestTab = 'params' | 'authorization' | 'headers' | 'body';
  * URL input, method selection, headers/body/auth editing
  */
 const RequestPanel: React.FC = () => {
-  const { currentRequest, updateRequest, isLoading, setLoading, setError, setResponse, addHistory, variables } = useStore();
+  const { getCurrentRequest, updateCurrentRequest, isLoading, setLoading, setError, setCurrentResponse, addHistory, variables } = useStore();
   const [activeTab, setActiveTab] = useState<RequestTab>('body');
+
+  // 变量自动提示状态
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [autocompleteFilter, setAutocompleteFilter] = useState('');
+  const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
+  const urlInputRef = useRef<HTMLInputElement>(null);
+
+  // 获取当前请求
+  const currentRequest = getCurrentRequest();
+
+  /**
+   * 检测光标位置是否在变量语法内
+   * 返回 {{ 后的文本，如果没有则返回 null
+   */
+  const detectVariableTrigger = useCallback((input: HTMLInputElement): string | null => {
+    const value = input.value;
+    const cursorPos = input.selectionStart || 0;
+
+    // 查找光标前最近的 {{
+    const beforeCursor = value.slice(0, cursorPos);
+    const lastBraceIndex = beforeCursor.lastIndexOf('{{');
+
+    if (lastBraceIndex === -1) return null;
+
+    // 检查 {{ 后是否有 }}（如果有说明变量已完整，不触发）
+    const afterBrace = value.slice(lastBraceIndex + 2);
+    const closeBraceIndex = afterBrace.indexOf('}}');
+
+    // 如果 }} 存在且在光标之前，说明变量已完整
+    if (closeBraceIndex !== -1 && closeBraceIndex < cursorPos - lastBraceIndex - 2) {
+      return null;
+    }
+
+    // 返回 {{ 后到光标位置的文本
+    return beforeCursor.slice(lastBraceIndex + 2);
+  }, []);
 
   /** Detect pasted content for curl command */
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -52,21 +89,21 @@ const RequestPanel: React.FC = () => {
         }
       } catch {
         // Parse failed, continue normal paste
-        updateRequest({ url: pastedText });
+        updateCurrentRequest({ url: pastedText });
       }
     }
   };
 
   /** Handle send request */
   const handleSend = async () => {
-    if (!currentRequest.url.trim()) {
+    if (!currentRequest?.url.trim()) {
       setError('Please enter request URL');
       return;
     }
 
     setLoading(true);
     setError(null);
-    setResponse(null);
+    setCurrentResponse(null);
 
     try {
       // Process variable substitution
@@ -84,7 +121,7 @@ const RequestPanel: React.FC = () => {
 
       // Send request
       const response = await requestService.execute(request);
-      setResponse(response);
+      setCurrentResponse(response);
 
       // Save to history (use original request to preserve variable references)
       await requestService.saveToHistory(currentRequest, response);
@@ -101,18 +138,84 @@ const RequestPanel: React.FC = () => {
     }
   };
 
-  /** Handle URL change */
+  /**
+   * 处理 URL 输入框变化
+   */
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateRequest({ url: e.target.value });
+    updateCurrentRequest({ url: e.target.value });
+  };
+
+  /**
+   * 处理 URL 输入框按键和输入事件
+   */
+  const handleUrlInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const trigger = detectVariableTrigger(input);
+
+    if (trigger !== null) {
+      setAutocompleteFilter(trigger);
+
+      // 计算下拉菜单位置
+      const rect = input.getBoundingClientRect();
+      setAutocompletePosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+      });
+      setShowAutocomplete(true);
+    } else {
+      setShowAutocomplete(false);
+    }
+  };
+
+  /**
+   * 处理变量选择
+   */
+  const handleVariableSelect = (variableName: string) => {
+    const input = urlInputRef.current;
+    if (!input) return;
+
+    const value = input.value;
+    const cursorPos = input.selectionStart || 0;
+
+    // 找到 {{ 的位置
+    const beforeCursor = value.slice(0, cursorPos);
+    const lastBraceIndex = beforeCursor.lastIndexOf('{{');
+
+    if (lastBraceIndex === -1) return;
+
+    // 构建新值：保留 {{ 前的部分 + {{variableName}} + 光标后的部分
+    const newValue =
+      value.slice(0, lastBraceIndex) +
+      `{{${variableName}}}` +
+      value.slice(cursorPos);
+
+    updateCurrentRequest({ url: newValue });
+    setShowAutocomplete(false);
+
+    // 设置光标位置到 }} 之后
+    const newCursorPos = lastBraceIndex + variableName.length + 4;
+    setTimeout(() => {
+      input.setSelectionRange(newCursorPos, newCursorPos);
+      input.focus();
+    }, 0);
+  };
+
+  /**
+   * 关闭自动提示
+   */
+  const handleAutocompleteClose = () => {
+    setShowAutocomplete(false);
   };
 
   /** Handle method change */
   const handleMethodChange = (method: string) => {
-    updateRequest({ method: method as typeof currentRequest.method });
+    updateCurrentRequest({ method: method as any });
   };
 
   /** Copy request as curl command */
   const handleCopyAsCurl = async () => {
+    if (!currentRequest) return;
+
     // Process variables before generating curl
     const processedRequest = variableService.processRequest(currentRequest, variables);
     processedRequest.url = variableService.normalizeUrl(processedRequest.url);
@@ -127,6 +230,15 @@ const RequestPanel: React.FC = () => {
     }
   };
 
+  // 如果没有当前请求，显示空状态
+  if (!currentRequest) {
+    return (
+      <div className="request-panel">
+        <div className="empty-state">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="request-panel">
       {/* URL input row */}
@@ -136,13 +248,19 @@ const RequestPanel: React.FC = () => {
           onChange={handleMethodChange}
         />
         <input
+          ref={urlInputRef}
           type="text"
           className="url-input"
           placeholder="Enter URL or paste curl command..."
           value={currentRequest.url}
           onChange={handleUrlChange}
+          onInput={handleUrlInput}
           onPaste={handlePaste}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !showAutocomplete) {
+              handleSend();
+            }
+          }}
         />
         <button
           className="btn btn-secondary copy-curl-btn"
@@ -159,6 +277,17 @@ const RequestPanel: React.FC = () => {
           {isLoading ? 'Sending...' : 'Send'}
         </button>
       </div>
+
+      {/* 变量自动提示 */}
+      {showAutocomplete && (
+        <VariableAutocomplete
+          variables={variables}
+          filter={autocompleteFilter}
+          position={autocompletePosition}
+          onSelect={handleVariableSelect}
+          onClose={handleAutocompleteClose}
+        />
+      )}
 
       {/* Tab switcher - Postman style */}
       <div className="request-tabs">

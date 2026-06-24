@@ -16,7 +16,11 @@ const generateId = () => `body-block-${idCounter++}`;
  * Supports: none, form-data, x-www-form-urlencoded, raw
  */
 const BodyEditor: React.FC = () => {
-  const { currentRequest, updateRequest } = useStore();
+  const { getCurrentRequest, updateCurrentRequest } = useStore();
+  const currentRequest = getCurrentRequest();
+
+  if (!currentRequest) return null;
+
   const { body } = currentRequest;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
@@ -58,14 +62,14 @@ const BodyEditor: React.FC = () => {
     // Load saved content for the new type (or empty if none)
     const savedContent = type !== 'none' ? (contentStore.current[type] ?? '') : '';
     const newRawType = type === 'raw' ? rawType : undefined;
-    updateRequest({ body: { type, content: savedContent, rawType: newRawType } });
+    updateCurrentRequest({ body: { type, content: savedContent, rawType: newRawType } });
     setIsViewMode(false);
     setCollapsedBlocks(new Set());
   };
 
   /** Handle content change */
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateRequest({ body: { ...body, content: e.target.value } });
+    updateCurrentRequest({ body: { ...body, content: e.target.value } });
   };
 
   /** Sync scroll */
@@ -82,7 +86,7 @@ const BodyEditor: React.FC = () => {
     try {
       const parsed = JSON.parse(body.content);
       const formatted = JSON.stringify(parsed, null, 2);
-      updateRequest({ body: { ...body, content: formatted } });
+      updateCurrentRequest({ body: { ...body, content: formatted } });
       setIsViewMode(true);
       setCollapsedBlocks(new Set());
     } catch {}
@@ -224,7 +228,7 @@ const BodyEditor: React.FC = () => {
         {(body.type === 'form-data' || body.type === 'x-www-form-urlencoded') && (
           <FormdataEditor
             value={body.content}
-            onChange={(v) => updateRequest({ body: { ...body, content: v } })}
+            onChange={(v) => updateCurrentRequest({ body: { ...body, content: v } })}
             type={body.type}
           />
         )}
@@ -239,7 +243,7 @@ const BodyEditor: React.FC = () => {
                   <button
                     key={t}
                     className={`type-btn ${rawType === t ? 'active' : ''}`}
-                    onClick={() => { setRawType(t); setIsViewMode(false); updateRequest({ body: { ...body, rawType: t } }); }}
+                    onClick={() => { setRawType(t); setIsViewMode(false); updateCurrentRequest({ body: { ...body, rawType: t } }); }}
                   >
                     {t === 'json' ? 'JSON' : t === 'text' ? 'Text' : t === 'xml' ? 'XML' : t === 'html' ? 'HTML' : 'JavaScript'}
                   </button>

@@ -8,19 +8,23 @@ import './AuthEditor.scss';
  * Supports: No Auth, API Key, Bearer Token, Basic Auth, OAuth2
  */
 const AuthEditor: React.FC = () => {
-  const { currentRequest, updateRequest } = useStore();
+  const { getCurrentRequest, updateCurrentRequest } = useStore();
+  const currentRequest = getCurrentRequest();
+
+  if (!currentRequest) return null;
+
   const { auth } = currentRequest;
 
   /** Handle auth type change */
   const handleTypeChange = (type: AuthType) => {
-    updateRequest({
+    updateCurrentRequest({
       auth: { type }
     });
   };
 
   /** Update API Key config */
   const updateApiKey = (field: 'key' | 'value' | 'addTo', value: string) => {
-    updateRequest({
+    updateCurrentRequest({
       auth: {
         ...auth,
         type: 'api-key',
@@ -37,7 +41,7 @@ const AuthEditor: React.FC = () => {
 
   /** Update Bearer Token */
   const updateBearerToken = (token: string) => {
-    updateRequest({
+    updateCurrentRequest({
       auth: {
         ...auth,
         type: 'bearer-token',
@@ -48,7 +52,7 @@ const AuthEditor: React.FC = () => {
 
   /** Update Basic Auth */
   const updateBasicAuth = (field: 'username' | 'password', value: string) => {
-    updateRequest({
+    updateCurrentRequest({
       auth: {
         ...auth,
         type: 'basic-auth',
@@ -64,7 +68,7 @@ const AuthEditor: React.FC = () => {
 
   /** Update OAuth2 */
   const updateOAuth2 = (field: 'accessToken' | 'tokenType', value: string) => {
-    updateRequest({
+    updateCurrentRequest({
       auth: {
         ...auth,
         type: 'oauth2',

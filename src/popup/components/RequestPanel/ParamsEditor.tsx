@@ -17,7 +17,10 @@ interface ParamItem {
  * Params stored independently, synced with URL
  */
 const ParamsEditor: React.FC = () => {
-  const { currentRequest, updateRequest } = useStore();
+  const { getCurrentRequest, updateCurrentRequest } = useStore();
+  const currentRequest = getCurrentRequest();
+
+  if (!currentRequest) return null;
 
   /** Parse initial params from URL */
   const parseParamsFromUrl = (url: string): ParamItem[] => {
@@ -81,9 +84,9 @@ const ParamsEditor: React.FC = () => {
   const syncUrl = useCallback((newParams: ParamItem[]) => {
     const newUrl = buildUrl(currentRequest.url, newParams);
     if (newUrl !== currentRequest.url) {
-      updateRequest({ url: newUrl });
+      updateCurrentRequest({ url: newUrl });
     }
-  }, [currentRequest.url, buildUrl, updateRequest]);
+  }, [currentRequest.url, buildUrl, updateCurrentRequest]);
 
   /** Add new param */
   const addParam = () => {

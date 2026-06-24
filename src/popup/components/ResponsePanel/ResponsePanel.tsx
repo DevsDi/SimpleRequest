@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useStore } from '@/store';
+import { HttpResponse } from '@/types';
 import JsonViewer from './JsonViewer';
 import HeadersViewer from './HeadersViewer';
 import { formatResponseTime, formatSize } from '@/utils/timeUtils';
@@ -11,11 +11,17 @@ import './ResponsePanel.scss';
 type ResponseTab = 'body' | 'headers';
 
 /**
+ * ResponsePanel 组件 Props
+ */
+interface ResponsePanelProps {
+  response: HttpResponse | null;
+}
+
+/**
  * Response panel component
  * Displays HTTP response data: status code, body, headers
  */
-const ResponsePanel: React.FC = () => {
-  const { response } = useStore();
+const ResponsePanel: React.FC<ResponsePanelProps> = ({ response }) => {
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
   const [showRaw, setShowRaw] = useState(false);
 
@@ -41,7 +47,7 @@ const ResponsePanel: React.FC = () => {
   if (!response) {
     return (
       <div className="response-panel empty">
-        <p className="empty-hint">Response will appear here after sending request</p>
+        <p className="empty-hint">发送请求以查看响应</p>
       </div>
     );
   }
