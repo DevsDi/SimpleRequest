@@ -89,7 +89,89 @@ class StorageService {
    */
   async loadTabsData(): Promise<TabsData | null> {
     const { tabsData } = await chrome.storage.local.get('tabsData');
-    return tabsData || null;
+
+    if (tabsData) {
+      return tabsData;
+    }
+
+    // 尝试迁移旧数据
+    const migrated = await this.migrateOldData();
+    if (migrated) {
+      const { tabsData: newData } = await chrome.storage.local.get('tabsData');
+      return newData || null;
+    }
+
+    return null;
+  }
+
+  /**
+   * 检查并迁移旧版本数据
+   * 旧版本使用 currentRequest，新版本使用 tabs 结构
+   * @returns 是否执行了迁移
+   */
+  async migrateOldData(): Promise<boolean> {
+    const { currentRequest } = await chrome.storage.local.get('currentRequest');
+
+    if (!currentRequest) {
+      return false;
+    }
+
+    // 检查是否已有 tabs 数据（直接读取，避免循环调用）
+    const { tabsData: existingTabsData } = await chrome.storage.local.get('tabsData');
+    if (existingTabsData && existingTabsData.tabs && existingTabsData.tabs.length > 0) {
+      // 已有新数据，清理旧数据
+      await chrome.storage.local.remove('currentRequest');
+      return false;
+    }
+
+    // 迁移：将 currentRequest 转为第一个 Tab
+    const id = currentRequest.id || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const now = Date.now();
+
+    const request: HttpRequest = {
+      ...currentRequest,
+      id,
+      updatedAt: now,
+    };
+
+    // 生成 Tab 名称
+    let tabName = request.method || 'GET';
+    if (request.url) {
+      try {
+        const urlObj = new URL(request.url.startsWith('http') ? request.url : `https://${request.url}`);
+        const path = urlObj.pathname + urlObj.search;
+        tabName += ` ${path || '/'}`;
+      } catch {
+        const pathStart = request.url.indexOf('/');
+        if (pathStart !== -1) {
+          tabName += ` ${request.url.slice(pathStart)}`;
+        } else {
+          tabName += ` ${request.url}`;
+        }
+      }
+    } else {
+      tabName += ' Untitled';
+    }
+
+    if (tabName.length > 25) {
+      tabName = tabName.slice(0, 22) + '...';
+    }
+
+    const tabsData: TabsData = {
+      tabs: [{
+        id,
+        name: tabName,
+        createdAt: now,
+      }],
+      requests: { [id]: request },
+      responses: { [id]: null },
+      activeTabId: id,
+    };
+
+    await this.saveTabsData(tabsData);
+    await chrome.storage.local.remove('currentRequest');
+
+    return true;
   }
 
   /**
