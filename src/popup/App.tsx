@@ -211,16 +211,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Tab Bar */}
-      <TabBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        requests={requests}
-        onAddTab={addTab}
-        onCloseTab={closeTab}
-        onSwitchTab={switchTab}
-      />
-
       {/* Main content */}
       <div className="app-main">
         {/* Left sidebar - history/variables */}
@@ -258,6 +248,16 @@ const App: React.FC = () => {
 
         {/* Right content - request/response */}
         <main className="app-content">
+          {/* Tab Bar - 在 URL 上方 */}
+          <TabBar
+            tabs={tabs}
+            activeTabId={activeTabId}
+            requests={requests}
+            onAddTab={addTab}
+            onCloseTab={closeTab}
+            onSwitchTab={switchTab}
+          />
+
           {/* Request panel */}
           <section
             className="request-section"
