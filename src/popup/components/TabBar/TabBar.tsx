@@ -75,14 +75,14 @@ const TabBar: React.FC<TabBarProps> = ({
             </div>
           );
         })}
+        <button
+          className="add-tab-btn"
+          onClick={onAddTab}
+          title="新建标签页"
+        >
+          +
+        </button>
       </div>
-      <button
-        className="add-tab-btn"
-        onClick={onAddTab}
-        title="新建标签页"
-      >
-        +
-      </button>
     </div>
   );
 };
