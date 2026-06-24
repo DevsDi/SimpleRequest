@@ -7,6 +7,9 @@ import { Header, HttpRequest, AuthConfig } from '@/types';
 /** Maximum history entries */
 export const MAX_HISTORY_ITEMS = 100;
 
+/** Maximum Tab 数量 */
+export const MAX_TABS = 20;
+
 /** Maximum single response size 2MB */
 export const MAX_RESPONSE_SIZE = 2 * 1024 * 1024;
 
