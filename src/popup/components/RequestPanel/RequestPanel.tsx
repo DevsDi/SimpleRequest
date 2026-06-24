@@ -96,7 +96,7 @@ const RequestPanel: React.FC = () => {
 
   /** Handle send request */
   const handleSend = async () => {
-    if (!currentRequest?.url.trim()) {
+    if (!currentRequest?.url?.trim()) {
       setError('Please enter request URL');
       return;
     }
@@ -272,7 +272,7 @@ const RequestPanel: React.FC = () => {
         <button
           className="btn btn-primary send-btn"
           onClick={handleSend}
-          disabled={isLoading || !currentRequest.url.trim()}
+          disabled={isLoading || !currentRequest?.url?.trim()}
         >
           {isLoading ? 'Sending...' : 'Send'}
         </button>
