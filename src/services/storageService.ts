@@ -1,4 +1,4 @@
-import { HistoryEntry, ExportData, Variable } from '@/types';
+import { HistoryEntry, ExportData, Variable, Tab, TabsData, HttpRequest, HttpResponse } from '@/types';
 
 /**
  * Storage service
@@ -73,6 +73,30 @@ class StorageService {
    */
   async setVariables(variables: Variable[]): Promise<void> {
     await chrome.storage.local.set({ variables });
+  }
+
+  /**
+   * 保存 Tab 数据
+   * @param data Tab 数据
+   */
+  async saveTabsData(data: TabsData): Promise<void> {
+    await chrome.storage.local.set({ tabsData: data });
+  }
+
+  /**
+   * 加载 Tab 数据
+   * @returns Tab 数据，如果不存在返回 null
+   */
+  async loadTabsData(): Promise<TabsData | null> {
+    const { tabsData } = await chrome.storage.local.get('tabsData');
+    return tabsData || null;
+  }
+
+  /**
+   * 清除 Tab 数据
+   */
+  async clearTabsData(): Promise<void> {
+    await chrome.storage.local.remove('tabsData');
   }
 }
 
