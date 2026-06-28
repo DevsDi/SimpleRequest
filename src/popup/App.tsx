@@ -44,15 +44,15 @@ const App: React.FC = () => {
   // Donate modal
   const [showDonate, setShowDonate] = useState(false);
 
-  /** 初始化加载 */
+  /** Initialize and load data */
   useEffect(() => {
     const loadData = async () => {
-      // 加载 Tab 数据
+      // Load tab data
       const tabsData = await storageService.loadTabsData();
       if (tabsData) {
         initTabs(tabsData);
       } else {
-        // 没有存储数据，初始化默认 Tab
+        // No stored data, initialize default tab
         initTabs({
           tabs: [],
           requests: {},
@@ -61,13 +61,13 @@ const App: React.FC = () => {
         });
       }
 
-      // 加载历史记录
+      // Load history records
       const history = await storageService.getHistory();
       setHistory(history);
     };
     loadData();
 
-    // 加载保存的布局设置
+    // Load saved layout settings
     const savedHeight = localStorage.getItem('requestHeight');
     const savedWidth = localStorage.getItem('sidebarWidth');
     if (savedHeight) {
@@ -100,25 +100,25 @@ const App: React.FC = () => {
     }
   }, [variables]);
 
-  /** 自动保存 Tab 数据 */
+  /** Auto-save tab data */
   useEffect(() => {
     const saveData = () => {
       const data = getTabsData();
       storageService.saveTabsData(data);
     };
 
-    // 空状态也需要保存，确保存储中的旧数据被清除
+    // Empty state also needs saving to ensure old data in storage is cleared
     if (tabs.length === 0) {
       saveData();
       return;
     }
 
-    // debounce 保存
+    // Debounce save
     const timer = setTimeout(saveData, 300);
     return () => clearTimeout(timer);
   }, [tabs, requests, activeTabId, getTabsData]);
 
-  /** 页面关闭前保存 */
+  /** Save before page close */
   useEffect(() => {
     const handleBeforeUnload = () => {
       const data = getTabsData();
@@ -135,7 +135,7 @@ const App: React.FC = () => {
     setIsDraggingH(true);
   };
 
-  /** 双击分隔条重置到默认 50:50 */
+  /** Double-click divider to reset to default 50:50 */
   const handleHDoubleClick = () => {
     setRequestHeight(null);
     localStorage.removeItem('requestHeight');
@@ -149,7 +149,7 @@ const App: React.FC = () => {
       if (!container) return;
       const rect = container.getBoundingClientRect();
       const newHeight = e.clientY - rect.top;
-      // 放宽拖拽边界：上下各保留 40px,基本可拖到极限
+      // Relax drag boundaries: keep 40px at top and bottom, basically can drag to limit
       const minHeight = 40;
       const maxHeight = rect.height - 40;
       if (newHeight >= minHeight && newHeight <= maxHeight) {
@@ -254,7 +254,7 @@ const App: React.FC = () => {
 
         {/* Right content - request/response */}
         <main className="app-content">
-          {/* Tab Bar - 在 URL 上方 */}
+          {/* Tab Bar - above URL */}
           <TabBar
             tabs={tabs}
             activeTabId={activeTabId}
@@ -284,7 +284,7 @@ const App: React.FC = () => {
             className={`resize-handle-h ${isDraggingH ? 'dragging' : ''}`}
             onMouseDown={handleHMouseDown}
             onDoubleClick={handleHDoubleClick}
-            title="拖动调整高度,双击重置"
+            title="Drag to resize, double-click to reset"
           >
             <div className="resize-line-h" />
           </div>

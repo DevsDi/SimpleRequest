@@ -47,7 +47,7 @@ const ResponsePanel: React.FC<ResponsePanelProps> = ({ response }) => {
   if (!response) {
     return (
       <div className="response-panel empty">
-        <p className="empty-hint">发送请求以查看响应</p>
+        <p className="empty-hint">Send request to view response</p>
       </div>
     );
   }

@@ -109,8 +109,8 @@ const VariableAutocomplete: React.FC<VariableAutocompleteProps> = ({
       >
         <div className="variable-empty">
           {enabledVariables.length === 0
-            ? '暂无变量，请在 Variables 面板添加'
-            : '无匹配变量'}
+            ? 'No variables, add in Variables panel'
+            : 'No matching variables'}
         </div>
       </div>
     );
