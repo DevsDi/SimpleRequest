@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "SimpleRequest",
   "version": "1.1.2",
-  "description": "Lightweight HTTP request debugging tool - Postman-style Chrome Extension",
+  "description": "Lightweight HTTP request debugging tool - Postman-style browser extension",
   "author": "SimpleRequest",
   "homepage_url": "https://github.com/simple-request",
   "permissions": [
