@@ -7,6 +7,8 @@ import BodyEditor from './BodyEditor';
 import ParamsEditor from './ParamsEditor';
 import AuthEditor from './AuthEditor';
 import VariableAutocomplete from './VariableAutocomplete';
+import TimeoutInput from './TimeoutInput';
+import RetryInput from './RetryInput';
 import './RequestPanel.scss';
 
 /**
@@ -271,6 +273,16 @@ const RequestPanel: React.FC = () => {
         >
           📋
         </button>
+        <TimeoutInput
+          value={currentRequest.timeout || 30000}
+          onChange={(timeout) => updateCurrentRequest({ timeout })}
+        />
+        <RetryInput
+          retryCount={currentRequest.retryCount || 0}
+          retryDelay={currentRequest.retryDelay || 1000}
+          onRetryCountChange={(retryCount) => updateCurrentRequest({ retryCount })}
+          onRetryDelayChange={(retryDelay) => updateCurrentRequest({ retryDelay })}
+        />
         <button
           className="btn btn-primary send-btn"
           onClick={handleSend}

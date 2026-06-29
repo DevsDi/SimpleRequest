@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store';
 import { Header } from '@/types';
 import { COMMON_HEADERS, HEADER_SUGGESTIONS } from '@/utils/constants';
@@ -17,6 +17,14 @@ const HeadersEditor: React.FC = () => {
   const [suggestions, setSuggestions] = useState<typeof HEADER_SUGGESTIONS>([]);
   const [suggestIndex, setSuggestIndex] = useState(0);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const lastAddedIndex = useRef<number | null>(null);
+  const focusedIndexRef = useRef<number | null>(null);
+
+  // 同步 focusedIndex 到 ref
+  useEffect(() => {
+    focusedIndexRef.current = focusedIndex;
+  }, [focusedIndex]);
 
   /** Add new header */
   const addHeader = () => {
@@ -25,9 +33,20 @@ const HeadersEditor: React.FC = () => {
       value: '',
       enabled: true,
     };
+    const newIndex = currentRequest.headers.length;
+    lastAddedIndex.current = newIndex;
     updateCurrentRequest({
       headers: [...currentRequest.headers, newHeader],
     });
+    // 设置焦点和新行的建议列表（延迟执行，等待 DOM 更新）
+    setTimeout(() => {
+      if (inputRefs.current[newIndex]) {
+        inputRefs.current[newIndex]?.focus();
+        setFocusedIndex(newIndex);
+        setSuggestions(HEADER_SUGGESTIONS.slice(0, 10));
+        setSuggestIndex(0);
+      }
+    }, 0);
   };
 
   /** Add preset header */
@@ -71,16 +90,19 @@ const HeadersEditor: React.FC = () => {
 
   /** Handle focus - show suggestions */
   const handleFocus = (index: number, value: string) => {
-    setFocusedIndex(index);
-    if (value.trim()) {
-      const filtered = HEADER_SUGGESTIONS.filter(h =>
-        h.key.toLowerCase().includes(value.toLowerCase())
-      );
-      setSuggestions(filtered.slice(0, 10));
-    } else {
-      setSuggestions(HEADER_SUGGESTIONS.slice(0, 10));
-    }
-    setSuggestIndex(0);
+    // 使用 requestAnimationFrame 确保在 blur 之后执行
+    requestAnimationFrame(() => {
+      setFocusedIndex(index);
+      if (value.trim()) {
+        const filtered = HEADER_SUGGESTIONS.filter(h =>
+          h.key.toLowerCase().includes(value.toLowerCase())
+        );
+        setSuggestions(filtered.slice(0, 10));
+      } else {
+        setSuggestions(HEADER_SUGGESTIONS.slice(0, 10));
+      }
+      setSuggestIndex(0);
+    });
   };
 
   /** Select suggestion */
@@ -110,10 +132,8 @@ const HeadersEditor: React.FC = () => {
 
   /** Blur handler - close suggestions */
   const handleBlur = () => {
-    setTimeout(() => {
-      setSuggestions([]);
-      setFocusedIndex(null);
-    }, 150);
+    setSuggestions([]);
+    setFocusedIndex(null);
   };
 
   return (
@@ -145,6 +165,7 @@ const HeadersEditor: React.FC = () => {
             />
             <div className="header-key-wrapper">
               <input
+                ref={(el) => (inputRefs.current[index] = el)}
                 type="text"
                 className="header-key"
                 placeholder="Header name"

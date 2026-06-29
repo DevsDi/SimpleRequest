@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import './JsonViewer.scss';
 
 /**
@@ -133,7 +133,8 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
       const items = keys.map((k, i) => {
         const val = renderJson(data[k as keyof typeof data], depth + 1);
         const comma = i < keys.length - 1 ? '<span class="v-comma">,</span>' : '';
-        return `<div class="line"><span class="v-key">"${escapeHtml(k)}"</span>: ${val}${comma}</div>`;
+        const keyText = `<span class="v-key">"${escapeHtml(k)}"</span>`;
+        return `<div class="line">${keyText}: ${val}${comma}</div>`;
       }).join('');
       const isCollapsed = collapsedBlocks.has(id);
       return `<span class="toggle" data-block-id="${id}">${isCollapsed ? '▶' : '▼'}</span><span class="v-bracket">{</span><span class="v-count">${keys.length}</span><div class="block ${isCollapsed ? 'hide' : ''}" data-block-id="${id}">${items}</div><span class="v-bracket">}</span>`;

@@ -115,6 +115,10 @@ export interface HttpRequest {
   auth: AuthConfig;
   /** Timeout in milliseconds */
   timeout?: number;
+  /** 重试次数（默认 0，不重试） */
+  retryCount?: number;
+  /** 重试间隔（毫秒，默认 1000） */
+  retryDelay?: number;
   /** Creation time */
   createdAt: number;
   /** Update time */
@@ -218,3 +222,5 @@ export interface TabsData {
   /** 当前激活的 Tab ID */
   activeTabId: string | null;
 }
+
+// === 存储数据结构扩展 ===

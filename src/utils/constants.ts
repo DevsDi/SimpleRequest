@@ -93,3 +93,24 @@ export const DEFAULT_REQUEST: HttpRequest = {
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };
+
+/** 超时时间预设选项 */
+export const TIMEOUT_OPTIONS = [
+  { label: '30s', value: 30000 },
+  { label: '60s', value: 60000 },
+  { label: '120s', value: 120000 },
+  { label: '300s', value: 300000 },
+  { label: 'Custom', value: 0 },  // 0 表示自定义输入
+];
+
+/** 重试次数预设选项 */
+export const RETRY_COUNT_OPTIONS = [
+  { label: '0', value: 0 },
+  { label: '1', value: 1 },
+  { label: '2', value: 2 },
+  { label: '3', value: 3 },
+  { label: '5', value: 5 },
+];
+
+/** 默认重试间隔 */
+export const DEFAULT_RETRY_DELAY = 1000;

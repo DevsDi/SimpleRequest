@@ -1,4 +1,10 @@
-import { HistoryEntry, ExportData, Variable, Tab, TabsData, HttpRequest, HttpResponse } from '@/types';
+import {
+  HistoryEntry,
+  ExportData,
+  Variable,
+  TabsData,
+  HttpRequest,
+} from '@/types';
 import { normalizeRequest } from '@/utils/requestUtils';
 
 /**
@@ -182,6 +188,9 @@ class StorageService {
   async clearTabsData(): Promise<void> {
     await chrome.storage.local.remove('tabsData');
   }
+
+  // ==================== 收藏夹相关方法 ====================
+
 }
 
 export const storageService = new StorageService();

@@ -31,6 +31,7 @@ const App: React.FC = () => {
     setHistory,
     variables,
     setVariables,
+    loadRequestToNewTab,
   } = useStore();
 
   // Request section height (null = use CSS flex default 50:50)

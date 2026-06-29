@@ -42,7 +42,7 @@
   overflow-y: auto;
   overflow-x: visible;
   min-height: 0;
-  padding-bottom: 220px; // Space for dropdown list
+  position: relative;
 }
 
 .header-row {
@@ -50,6 +50,11 @@
   align-items: flex-start;
   gap: 8px;
   position: relative;
+  z-index: 1;
+
+  &:has(.header-key:focus) {
+    z-index: 100;
+  }
 }
 
 .header-checkbox {
@@ -65,7 +70,6 @@
   position: relative;
   width: 180px;
   flex-shrink: 0;
-  z-index: 10;
 }
 
 .header-key {
@@ -173,4 +177,9 @@
 .add-header-btn {
   margin-top: 4px;
   flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-light);
+  z-index: 1;
 }

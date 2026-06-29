@@ -4,6 +4,7 @@
  */
 
 import { ExecuteRequestMessage, HttpResponse, AuthConfig } from '@/types';
+import { DEFAULT_TIMEOUT, DEFAULT_RETRY_DELAY } from '@/utils/constants';
 
 // Open new tab when extension icon is clicked
 chrome.action.onClicked.addListener(() => {
@@ -19,7 +20,7 @@ chrome.runtime.onMessage.addListener(
   (message: ExecuteRequestMessage, _sender, sendResponse) => {
     if (message.type === 'executeRequest') {
       // Handle request asynchronously
-      executeRequest(message.request)
+      executeRequestWithRetry(message.request)
         .then((response) => {
           sendResponse({ success: true, data: response });
         })
@@ -97,21 +98,19 @@ function applyAuthToUrl(url: string, auth: AuthConfig): string {
 function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): Record<string, string> {
   const headers: Record<string, string> = {};
 
-  // 1. Add user-defined enabled headers first (user takes priority)
+  // 1. Add auth headers first (auth config takes priority)
+  const authHeaders = buildAuthHeaders(request.auth);
+  for (const [key, value] of Object.entries(authHeaders)) {
+    headers[key] = value;
+  }
+
+  // 2. Add user-defined enabled headers (can override auth headers if same key)
   request.headers
     .filter((h) => h.enabled && h.key.trim())
     .forEach((h) => {
       const key = h.key.toLowerCase();
       headers[key] = h.value;
     });
-
-  // 2. Add auth headers (do NOT overwrite user-defined headers)
-  const authHeaders = buildAuthHeaders(request.auth);
-  for (const [key, value] of Object.entries(authHeaders)) {
-    if (!headers[key]) {
-      headers[key] = value;
-    }
-  }
 
   // 3. Auto-set default headers (when user hasn't set them)
 
@@ -236,10 +235,15 @@ function parseUrlencodedContent(content: string): URLSearchParams {
 }
 
 /**
- * Execute HTTP request
+ * Execute HTTP request with timeout support
  */
 async function executeRequest(request: HttpRequestInternal): Promise<HttpResponse> {
   const startTime = Date.now();
+  const timeout = request.timeout || DEFAULT_TIMEOUT;
+
+  // Create AbortController for timeout control
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
     // Apply auth to URL (API Key query parameter)
@@ -270,13 +274,15 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
     // Build request headers (including auth)
     const headers = buildHeaders(request, hasFormDataBody);
 
-    // Send request
+    // Send request with abort signal
     const response = await fetch(url, {
       method: request.method,
       headers,
       body: body,
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const endTime = Date.now();
 
     // Parse response
@@ -295,8 +301,73 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
       size: responseBody.length,
     };
   } catch (error: any) {
+    clearTimeout(timeoutId);
+
+    // Handle timeout error
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeout}ms`);
+    }
+
     throw new Error(error.message || 'Request failed');
   }
+}
+
+/**
+ * 判断错误是否应该重试
+ * 网络错误、超时、5xx 状态码可以重试
+ */
+function shouldRetry(error: any): boolean {
+  const message = error.message?.toLowerCase() || '';
+  return (
+    message.includes('timeout') ||
+    message.includes('network') ||
+    message.includes('fetch') ||
+    message.includes('abort') ||
+    message.includes('failed to fetch')
+  );
+}
+
+/**
+ * 延迟函数
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * 带重试功能的请求执行
+ */
+async function executeRequestWithRetry(request: HttpRequestInternal): Promise<HttpResponse> {
+  const maxRetries = request.retryCount || 0;
+  const retryDelay = request.retryDelay || DEFAULT_RETRY_DELAY;
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await executeRequest(request);
+      return response;
+    } catch (error: any) {
+      lastError = error;
+
+      // 最后一次尝试失败，直接抛出错误
+      if (attempt === maxRetries) {
+        throw error;
+      }
+
+      // 只有网络错误、超时等才重试
+      if (shouldRetry(error)) {
+        await sleep(retryDelay);
+        continue;
+      }
+
+      // 其他错误直接抛出
+      throw error;
+    }
+  }
+
+  // 理论上不会执行到这里，但 TypeScript 需要返回值
+  throw lastError || new Error('Request failed after retries');
 }
 
 /**
@@ -308,4 +379,7 @@ interface HttpRequestInternal {
   headers: Array<{ key: string; value: string; enabled: boolean }>;
   body: { type: string; content: string; rawType?: string };
   auth: AuthConfig;
+  timeout?: number;
+  retryCount?: number;
+  retryDelay?: number;
 }

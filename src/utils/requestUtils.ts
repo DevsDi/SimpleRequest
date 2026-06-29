@@ -1,5 +1,5 @@
 import { HttpRequest, AuthConfig, PartialHttpRequest } from '@/types';
-import { DEFAULT_REQUEST, DEFAULT_AUTH } from '@/utils/constants';
+import { DEFAULT_REQUEST, DEFAULT_AUTH, DEFAULT_TIMEOUT } from '@/utils/constants';
 
 /**
  * 规范化认证配置
@@ -33,6 +33,9 @@ export function normalizeRequest(partial: PartialHttpRequest): HttpRequest {
       rawType: partial.body?.rawType ?? 'json',
     },
     auth: normalizeAuth(partial.auth),
+    timeout: partial.timeout ?? DEFAULT_TIMEOUT,
+    retryCount: partial.retryCount ?? 0,
+    retryDelay: partial.retryDelay ?? 1000,
     createdAt: partial.createdAt ?? now,
     updatedAt: partial.updatedAt ?? now,
   };

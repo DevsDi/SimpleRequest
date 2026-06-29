@@ -32,6 +32,7 @@ interface AppState {
   getCurrentRequest: () => HttpRequest | null;
   updateCurrentRequest: (partial: Partial<HttpRequest>) => void;
   setCurrentRequest: (request: HttpRequest) => void;
+  loadRequestToNewTab: (request: HttpRequest) => void;
 
   // Response 操作（针对当前激活 Tab）
   getCurrentResponse: () => HttpResponse | null;
@@ -422,6 +423,55 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
+  // 将请求加载到新 Tab（用于历史记录点击，避免覆盖当前 Tab）
+  // 如果已存在相同内容的 Tab，直接切换到该 Tab
+  loadRequestToNewTab: (request) => {
+    const state = get();
+
+    // 检查是否已存在相同请求的 Tab
+    const requestKey = getRequestKey(request);
+    const existingTab = state.tabs.find(tab => {
+      const tabRequest = state.requests[tab.id];
+      return tabRequest && getRequestKey(tabRequest) === requestKey;
+    });
+
+    if (existingTab) {
+      // 已存在相同 Tab，直接切换
+      set({ activeTabId: existingTab.id, error: null });
+      return;
+    }
+
+    // 检查 Tab 数量限制
+    if (state.tabs.length >= MAX_TABS) {
+      set({ error: `Maximum ${MAX_TABS} tabs allowed. Please close some tabs first.` });
+      return;
+    }
+
+    const newId = generateId();
+    const now = Date.now();
+
+    // 使用 normalizeRequest 确保所有字段完整
+    const newRequest = normalizeRequest({
+      ...request,
+      id: newId,
+      updatedAt: now,
+    });
+
+    const newTab: Tab = {
+      id: newId,
+      name: generateTabName(newRequest),
+      createdAt: now,
+    };
+
+    set({
+      tabs: [...state.tabs, newTab],
+      requests: { ...state.requests, [newId]: newRequest },
+      responses: { ...state.responses, [newId]: null },
+      activeTabId: newId,
+      error: null,
+    });
+  },
+
   // 获取当前响应
   getCurrentResponse: () => {
     const state = get();
@@ -516,4 +566,5 @@ export const useStore = create<AppState>((set, get) => ({
       error: null,
     });
   },
+
 }));

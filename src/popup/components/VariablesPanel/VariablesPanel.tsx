@@ -5,16 +5,17 @@ import './VariablesPanel.scss';
 
 /**
  * Variables panel component
- * Variable management panel for adding/editing/deleting variables
+ * 单一变量管理面板，支持添加、编辑、删除变量
  */
 const VariablesPanel: React.FC = () => {
   const { variables, setVariables } = useStore();
+
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
   const [newValue, setNewValue] = useState('');
 
-  /** Add new variable */
-  const handleAdd = () => {
+  /** 添加新变量 */
+  const handleAddVariable = () => {
     if (!newName.trim()) return;
 
     const newVar: Variable = {
@@ -28,8 +29,8 @@ const VariablesPanel: React.FC = () => {
     setNewValue('');
   };
 
-  /** Delete variable */
-  const handleDelete = (index: number) => {
+  /** 删除变量 */
+  const handleDeleteVariable = (index: number) => {
     const newVars = variables.filter((_, i) => i !== index);
     setVariables(newVars);
     if (editingIndex === index) {
@@ -37,20 +38,20 @@ const VariablesPanel: React.FC = () => {
     }
   };
 
-  /** Toggle variable enabled state */
-  const handleToggle = (index: number) => {
+  /** 切换变量启用状态 */
+  const handleToggleVariable = (index: number) => {
     const newVars = variables.map((v, i) =>
       i === index ? { ...v, enabled: !v.enabled } : v
     );
     setVariables(newVars);
   };
 
-  /** Start editing variable */
-  const handleEdit = (index: number) => {
+  /** 开始编辑变量 */
+  const handleEditVariable = (index: number) => {
     setEditingIndex(index);
   };
 
-  /** Save edit */
+  /** 保存变量编辑 */
   const handleSaveEdit = (index: number, name: string, value: string) => {
     const newVars = variables.map((v, i) =>
       i === index ? { ...v, name: name.trim(), value } : v
@@ -59,19 +60,20 @@ const VariablesPanel: React.FC = () => {
     setEditingIndex(null);
   };
 
-  /** Cancel edit */
+  /** 取消变量编辑 */
   const handleCancelEdit = () => {
     setEditingIndex(null);
   };
 
   return (
     <div className="variables-panel">
+      {/* 标题 */}
       <div className="panel-header">
         <h3>Variables</h3>
         <span className="count">{variables.length}</span>
       </div>
 
-      {/* Add new variable */}
+      {/* 添加新变量 */}
       <div className="add-variable">
         <input
           type="text"
@@ -79,7 +81,7 @@ const VariablesPanel: React.FC = () => {
           placeholder="Variable name"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddVariable()}
         />
         <input
           type="text"
@@ -87,14 +89,14 @@ const VariablesPanel: React.FC = () => {
           placeholder="Variable value"
           value={newValue}
           onChange={(e) => setNewValue(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddVariable()}
         />
-        <button className="btn btn-add" onClick={handleAdd} disabled={!newName.trim()}>
+        <button className="btn btn-add" onClick={handleAddVariable} disabled={!newName.trim()}>
           +
         </button>
       </div>
 
-      {/* Variable list */}
+      {/* 变量列表 */}
       <div className="variables-list">
         {variables.length === 0 && (
           <div className="empty-hint">
@@ -109,7 +111,7 @@ const VariablesPanel: React.FC = () => {
             className={`variable-item ${variable.enabled ? 'enabled' : 'disabled'} ${editingIndex === index ? 'editing' : ''}`}
           >
             {editingIndex === index ? (
-              // Edit mode
+              // 编辑模式
               <>
                 <input
                   type="text"
@@ -155,20 +157,20 @@ const VariablesPanel: React.FC = () => {
                 </button>
               </>
             ) : (
-              // Display mode
+              // 显示模式
               <>
                 <input
                   type="checkbox"
                   className="var-toggle"
                   checked={variable.enabled}
-                  onChange={() => handleToggle(index)}
+                  onChange={() => handleToggleVariable(index)}
                 />
                 <span className="var-name">{variable.name}</span>
                 <span className="var-value">{variable.value}</span>
-                <button className="btn btn-edit" onClick={() => handleEdit(index)}>
+                <button className="btn btn-edit" onClick={() => handleEditVariable(index)}>
                   ✎
                 </button>
-                <button className="btn btn-delete" onClick={() => handleDelete(index)}>
+                <button className="btn btn-delete" onClick={() => handleDeleteVariable(index)}>
                   ×
                 </button>
               </>

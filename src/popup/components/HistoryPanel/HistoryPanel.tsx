@@ -10,11 +10,11 @@ import './HistoryPanel.scss';
  * Shows request history list, click to reload, delete single or clear all
  */
 const HistoryPanel: React.FC = () => {
-  const { history, setCurrentRequest, removeHistory, clearHistory } = useStore();
+  const { history, loadRequestToNewTab, removeHistory, clearHistory } = useStore();
 
-  /** Click history item to load into current request */
+  /** 点击历史记录项，加载到新 Tab */
   const handleItemClick = (entry: HistoryEntry) => {
-    setCurrentRequest(entry.request);
+    loadRequestToNewTab(entry.request);
   };
 
   /** Delete single history entry */
