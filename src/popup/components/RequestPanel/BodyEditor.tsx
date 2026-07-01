@@ -87,7 +87,8 @@ const BodyEditor: React.FC = () => {
       const parsed = JSON.parse(body.content);
       const formatted = JSON.stringify(parsed, null, 2);
       updateCurrentRequest({ body: { ...body, content: formatted } });
-      setIsViewMode(true);
+      // 保持在编辑模式，样式保持一致
+      setIsViewMode(false);
       setCollapsedBlocks(new Set());
     } catch {}
   };
@@ -278,6 +279,8 @@ const BodyEditor: React.FC = () => {
                   <SyntaxHighlighter
                     language={getLanguage()}
                     style={vscDarkPlus}
+                    wrapLines={true}
+                    wrapLongLines={true}
                     customStyle={{
                       margin: 0,
                       padding: '0',
@@ -285,8 +288,10 @@ const BodyEditor: React.FC = () => {
                       lineHeight: '1.5',
                       background: 'transparent',
                       fontFamily: 'JetBrains Mono, Monaco, monospace',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
                     }}
-                    codeTagProps={{ style: { fontFamily: 'JetBrains Mono, Monaco, monospace' } }}
+                    codeTagProps={{ style: { fontFamily: 'JetBrains Mono, Monaco, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }}
                   >
                     {body.content || ' '}
                   </SyntaxHighlighter>

@@ -155,12 +155,14 @@
   height: 100%;
   padding: 10px;
   margin: 0;
-  overflow: hidden;
+  overflow: auto;
   pointer-events: none;
   font-size: 13px;
+  font-family: 'JetBrains Mono', 'Monaco', monospace;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  /* 隐藏滚动条，但保持可滚动 */
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
@@ -173,12 +175,14 @@
   height: 100%;
   padding: 10px;
   margin: 0;
-  overflow: hidden;
+  overflow: auto;
   pointer-events: none;
   font-size: 13px;
+  font-family: 'JetBrains Mono', 'Monaco', monospace;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  /* 隐藏滚动条，但保持可滚动 */
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
@@ -204,6 +208,26 @@
   word-break: break-word;
 
   &::selection { background: rgba(59, 130, 246, 0.5); }
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 .raw-textarea {
@@ -227,6 +251,26 @@
   word-break: break-word;
 
   &::selection { background: rgba(59, 130, 246, 0.5); }
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /** JSON view container - collapsible */
