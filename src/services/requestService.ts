@@ -28,6 +28,16 @@ class RequestService {
   }
 
   /**
+   * Cancel current request
+   */
+  async cancel(): Promise<void> {
+    const response = await chrome.runtime.sendMessage({ type: 'cancelRequest' });
+    if (!response.success) {
+      throw new Error(response.error || 'Cancel failed');
+    }
+  }
+
+  /**
    * Generate unique key for request (used to check if same request)
    * @param request Request configuration
    * @returns Unique key string

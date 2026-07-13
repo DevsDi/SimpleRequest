@@ -140,6 +140,18 @@ const RequestPanel: React.FC = () => {
     }
   };
 
+  /** Handle cancel request */
+  const handleCancel = async () => {
+    try {
+      await requestService.cancel();
+      setLoading(false);
+      setError('Request cancelled');
+    } catch (err) {
+      console.warn('Cancel request failed:', err);
+      setLoading(false);
+    }
+  };
+
   /**
    * 处理 URL 输入框变化
    */
@@ -284,11 +296,11 @@ const RequestPanel: React.FC = () => {
           onRetryDelayChange={(retryDelay) => updateCurrentRequest({ retryDelay })}
         />
         <button
-          className="btn btn-primary send-btn"
-          onClick={handleSend}
-          disabled={isLoading || !currentRequest?.url?.trim()}
+          className={`btn ${isLoading ? 'btn-secondary' : 'btn-primary'} send-btn`}
+          onClick={isLoading ? handleCancel : handleSend}
+          disabled={!isLoading && !currentRequest?.url?.trim()}
         >
-          {isLoading ? 'Sending...' : 'Send'}
+          {isLoading ? 'Cancel' : 'Send'}
         </button>
       </div>
 

@@ -87,8 +87,8 @@ const BodyEditor: React.FC = () => {
       const parsed = JSON.parse(body.content);
       const formatted = JSON.stringify(parsed, null, 2);
       updateCurrentRequest({ body: { ...body, content: formatted } });
-      // 保持在编辑模式，样式保持一致
-      setIsViewMode(false);
+      // 格式化后进入查看模式，支持折叠节点
+      setIsViewMode(true);
       setCollapsedBlocks(new Set());
     } catch {}
   };

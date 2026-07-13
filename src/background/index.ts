@@ -6,6 +6,9 @@
 import { ExecuteRequestMessage, HttpResponse, AuthConfig } from '@/types';
 import { DEFAULT_TIMEOUT, DEFAULT_RETRY_DELAY } from '@/utils/constants';
 
+// 当前请求的 AbortController（用于取消请求）
+let currentAbortController: AbortController | null = null;
+
 // Open new tab when extension icon is clicked
 chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({
@@ -29,6 +32,20 @@ chrome.runtime.onMessage.addListener(
         });
 
       // Return true to indicate async response
+      return true;
+    }
+
+    if (message.type === 'cancelRequest') {
+      // 取消当前请求
+      if (currentAbortController) {
+        currentAbortController.abort();
+        // 标记为手动取消（用于区分超时）
+        (currentAbortController as any).manualCancel = true;
+        currentAbortController = null;
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: 'No active request' });
+      }
       return true;
     }
   }
@@ -241,8 +258,14 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
   const startTime = Date.now();
   const timeout = request.timeout || DEFAULT_TIMEOUT;
 
+  // 取消之前的请求（确保同时只有一个请求）
+  if (currentAbortController) {
+    currentAbortController.abort();
+  }
+
   // Create AbortController for timeout control
   const controller = new AbortController();
+  currentAbortController = controller;
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
@@ -292,6 +315,9 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
       responseHeaders[key] = value;
     });
 
+    // Clear abort controller
+    currentAbortController = null;
+
     return {
       status: response.status,
       statusText: response.statusText,
@@ -303,9 +329,13 @@ async function executeRequest(request: HttpRequestInternal): Promise<HttpRespons
   } catch (error: any) {
     clearTimeout(timeoutId);
 
-    // Handle timeout error
+    // Clear abort controller
+    currentAbortController = null;
+
+    // Handle timeout/cancel error
     if (error.name === 'AbortError') {
-      throw new Error(`Request timeout after ${timeout}ms`);
+      const isManualCancel = (controller as any).manualCancel;
+      throw new Error(isManualCancel ? 'Request cancelled' : `Request timeout after ${timeout}ms`);
     }
 
     throw new Error(error.message || 'Request failed');
