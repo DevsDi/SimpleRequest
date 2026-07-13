@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useRef } from 'react';
-import Editor, { OnMount, BeforeMount, loader } from '@monaco-editor/react';
+import Editor, { OnMount, BeforeMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
@@ -16,9 +16,6 @@ import './JsonViewer.scss';
     return new editorWorker();
   },
 };
-
-// 配置 loader 使用本地 monaco，避免从 CDN 加载
-loader.config({ monaco });
 
 /**
  * JSON viewer component with Monaco Editor (read-only)

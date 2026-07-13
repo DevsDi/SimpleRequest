@@ -1,3 +1,5 @@
+import '@/monaco';  // 初始化 Monaco loader（必须在其他导入之前）
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
