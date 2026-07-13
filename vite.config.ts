@@ -8,6 +8,7 @@ export default defineConfig({
   base: './', // 使用相对路径,Chrome扩展必需
   build: {
     outDir: 'dist',
+    target: 'esnext',
     rollupOptions: {
       input: {
         popup: resolve(__dirname, 'src/popup/popup.html'),
@@ -15,7 +16,6 @@ export default defineConfig({
       },
       output: {
         entryFileNames: (chunkInfo) => {
-          // background service worker 需要放在固定位置
           if (chunkInfo.name === 'background') {
             return 'background/index.js';
           }
@@ -23,6 +23,17 @@ export default defineConfig({
         },
         chunkFileNames: 'chunks/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks: (id) => {
+          // Monaco 核心编辑器代码单独打包
+          if (id.includes('monaco-editor/esm/vs/editor/edcore.main') ||
+              id.includes('monaco-editor/esm/vs/editor/editor.api')) {
+            return 'monaco-core';
+          }
+          // JSON 语言支持
+          if (id.includes('monaco-editor/esm/vs/language/json')) {
+            return 'monaco-json';
+          }
+        },
       },
     },
   },

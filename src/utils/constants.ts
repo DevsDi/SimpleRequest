@@ -4,8 +4,8 @@
 
 import { Header, HttpRequest, AuthConfig } from '@/types';
 
-/** Maximum history entries */
-export const MAX_HISTORY_ITEMS = 100;
+/** Maximum history entries (reduced for sync storage limit) */
+export const MAX_HISTORY_ITEMS = 50;
 
 /** Maximum Tab 数量 */
 export const MAX_TABS = 20;

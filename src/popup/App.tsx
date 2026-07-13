@@ -7,6 +7,7 @@ import HistoryPanel from './components/HistoryPanel';
 import VariablesPanel from './components/VariablesPanel';
 import TabBar from './components/TabBar';
 import DonateModal from './components/DonateModal';
+import { version } from '../../package.json';
 import './App.scss';
 
 /**
@@ -29,9 +30,6 @@ const App: React.FC = () => {
     isLoading,
     error,
     setHistory,
-    variables,
-    setVariables,
-    loadRequestToNewTab,
   } = useStore();
 
   // Request section height (null = use CSS flex default 50:50)
@@ -48,7 +46,7 @@ const App: React.FC = () => {
   /** Initialize and load data */
   useEffect(() => {
     const loadData = async () => {
-      // Load tab data
+      // Load tab data from local storage
       const tabsData = await storageService.loadTabsData();
       if (tabsData) {
         initTabs(tabsData);
@@ -59,12 +57,17 @@ const App: React.FC = () => {
           requests: {},
           responses: {},
           activeTabId: null,
+          variables: [],
         });
       }
 
-      // Load history records
+      // Load history from sync storage
       const history = await storageService.getHistory();
       setHistory(history);
+
+      // Load variables from sync storage
+      const vars = await storageService.getVariables();
+      useStore.getState().setVariables(vars);
     };
     loadData();
 
@@ -84,22 +87,6 @@ const App: React.FC = () => {
       }
     }
   }, [initTabs, setHistory]);
-
-  /** Load variables */
-  useEffect(() => {
-    const loadVariables = async () => {
-      const vars = await storageService.getVariables();
-      setVariables(vars);
-    };
-    loadVariables();
-  }, [setVariables]);
-
-  /** Save variables when changed */
-  useEffect(() => {
-    if (variables.length > 0 || useStore.getState().variables.length === 0) {
-      storageService.setVariables(variables);
-    }
-  }, [variables]);
 
   /** Auto-save tab data */
   useEffect(() => {
@@ -208,6 +195,7 @@ const App: React.FC = () => {
       <header className="app-header">
         <div className="header-left">
           <h1 className="app-title">SimpleRequest</h1>
+          <span className="app-version">v{version}</span>
           <button
             className="donate-header-btn"
             onClick={() => setShowDonate(true)}

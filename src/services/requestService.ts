@@ -1,5 +1,5 @@
 import { HttpRequest, HttpResponse, HistoryEntry } from '@/types';
-import { MAX_HISTORY_ITEMS, MAX_RESPONSE_SIZE } from '@/utils/constants';
+import { MAX_HISTORY_ITEMS } from '@/utils/constants';
 
 /**
  * Request service
@@ -62,15 +62,25 @@ class RequestService {
   }
 
   /**
-   * Save request to history
+   * Save request to history (local storage, without response body)
    * @param request Request configuration
    * @param response Response data
+   * @param tabId Tab ID for response cleanup
    */
-  async saveToHistory(request: HttpRequest, response: HttpResponse): Promise<void> {
+  async saveToHistory(request: HttpRequest, response: HttpResponse, tabId?: string): Promise<void> {
     const requestKey = this.getRequestKey(request);
 
-    // Get existing history
+    // Get existing history from local storage
     const { history } = await chrome.storage.local.get({ history: [] });
+
+    // 只保存响应元数据，不保存 body
+    const responseMeta = {
+      status: response.status,
+      statusText: response.statusText,
+      time: response.time,
+      size: response.size,
+      headers: response.headers,
+    };
 
     // Check if same request already exists
     const existingIndex = history.findIndex((entry: HistoryEntry) =>
@@ -78,11 +88,12 @@ class RequestService {
     );
 
     if (existingIndex >= 0) {
-      // Update existing record timestamp and response
+      // Update existing record timestamp and response meta
       history[existingIndex] = {
         ...history[existingIndex],
-        response: this.truncateResponse(response),
+        response: responseMeta as any,
         timestamp: Date.now(),
+        tabId, // 更新 tabId
       };
       // Move to front
       const updatedEntry = history.splice(existingIndex, 1)[0];
@@ -92,35 +103,20 @@ class RequestService {
       const historyEntry: HistoryEntry = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         request,
-        response: this.truncateResponse(response),
+        response: responseMeta as any,
         timestamp: Date.now(),
+        tabId,
       };
       history.unshift(historyEntry);
     }
 
-    // Limit count and save
+    // Limit count (超过50条覆盖最早的) and save to local
     const newHistory = history.slice(0, MAX_HISTORY_ITEMS);
     await chrome.storage.local.set({ history: newHistory });
   }
 
   /**
-   * Truncate oversized response body
-   * @param response Response data
-   * @returns Truncated response
-   */
-  private truncateResponse(response: HttpResponse): HttpResponse {
-    if (response.size > MAX_RESPONSE_SIZE) {
-      return {
-        ...response,
-        body: '[Response body too large, truncated]',
-        size: MAX_RESPONSE_SIZE,
-      };
-    }
-    return response;
-  }
-
-  /**
-   * Get history records
+   * Get history records from local storage
    * @returns History list
    */
   async getHistory(): Promise<HistoryEntry[]> {

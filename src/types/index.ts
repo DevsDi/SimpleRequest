@@ -161,6 +161,8 @@ export interface HistoryEntry {
   response: HttpResponse | null;
   /** Timestamp */
   timestamp: number;
+  /** Tab ID (for response cleanup) */
+  tabId?: string;
 }
 
 /**
@@ -221,6 +223,8 @@ export interface TabsData {
   responses: Record<string, HttpResponse | null>;
   /** 当前激活的 Tab ID */
   activeTabId: string | null;
+  /** 全局变量列表 */
+  variables: Variable[];
 }
 
 // === 存储数据结构扩展 ===

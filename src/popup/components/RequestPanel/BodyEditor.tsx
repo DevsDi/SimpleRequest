@@ -1,34 +1,43 @@
-import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import Editor, { OnMount, BeforeMount, loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import type { editor } from 'monaco-editor';
 import { useStore } from '@/store';
 import { BODY_TYPES, BodyType } from '@/utils/constants';
 import { RawContentType } from '@/types';
+import { useEditorFontSize, FONT_SIZE_OPTIONS } from '@/popup/hooks/useEditorFontSize';
 import FormdataEditor from './FormdataEditor';
 import './BodyEditor.scss';
 
-/** Generate unique ID for collapsible blocks */
-let idCounter = 0;
-const generateId = () => `body-block-${idCounter++}`;
+// 配置 Monaco 使用本地 worker（Chrome 扩展 CSP 兼容）
+(self as any).MonacoEnvironment = {
+  getWorker(_: any, label: string) {
+    if (label === 'json') {
+      return new jsonWorker();
+    }
+    return new editorWorker();
+  },
+};
+
+// 配置 loader 使用本地 monaco，避免从 CDN 加载
+loader.config({ monaco });
 
 /**
  * Body editor component - Postman style
  * Supports: none, form-data, x-www-form-urlencoded, raw
+ * Uses Monaco Editor for raw content (JSON folding support)
  */
 const BodyEditor: React.FC = () => {
   const { getCurrentRequest, updateCurrentRequest } = useStore();
   const currentRequest = getCurrentRequest();
 
-  if (!currentRequest) return null;
-
-  const { body } = currentRequest;
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const highlightRef = useRef<HTMLPreElement>(null);
-
-  /** Raw subtype - synced with body.rawType */
-  const [rawType, setRawType] = useState<RawContentType>(body.rawType || 'json');
-  const [isViewMode, setIsViewMode] = useState(false);
-  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+  // 所有 hooks 必须在条件返回之前调用
+  const [fontSize, setFontSize] = useEditorFontSize();
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const [rawType, setRawType] = useState<RawContentType>('json');
+  const lastBodyTypeRef = useRef<BodyType>('none');
 
   /** Per-type content storage - each body type keeps its own content */
   const contentStore = useRef<Record<string, string>>({
@@ -37,65 +46,84 @@ const BodyEditor: React.FC = () => {
     'raw': '',
   });
 
-  /** Keep contentStore synced when body type or content changes externally (e.g. history load) */
-  const lastBodyTypeRef = useRef(body.type);
+  /** Monaco editor mount handler - define custom theme */
+  const handleEditorWillMount: BeforeMount = (monaco) => {
+    // 定义自定义主题，背景色与项目统一
+    monaco.editor.defineTheme('custom-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#1e1e2e',
+        'editor.lineHighlightBackground': '#313244',
+      }
+    });
+  };
+
+  /** Monaco editor mount handler */
+  const handleEditorMount: OnMount = (editor) => {
+    editorRef.current = editor;
+  };
+
+  // 条件返回放在所有 hooks 之后
+  if (!currentRequest) return null;
+
+  const { body } = currentRequest;
+
+  // 同步 rawType 与 body.rawType
   useEffect(() => {
-    // Only update contentStore when body type changes (not on every keystroke)
+    if (body.rawType && body.rawType !== rawType) {
+      setRawType(body.rawType);
+    }
+  }, [body.rawType, rawType]);
+
+  /** Keep contentStore synced when body type or content changes externally */
+  useEffect(() => {
     if (body.type !== lastBodyTypeRef.current) {
       lastBodyTypeRef.current = body.type;
       if (body.type !== 'none') {
         contentStore.current[body.type] = body.content;
       }
-      // Also sync rawType when loading from history
-      if (body.rawType) {
-        setRawType(body.rawType);
-      }
     }
   }, [body.type, body.content]);
 
-  /** Handle type change - save current content, load new type's content */
+  /** Handle type change */
   const handleTypeChange = (type: BodyType) => {
-    // Save current content before switching
     if (body.type !== 'none') {
       contentStore.current[body.type] = body.content;
     }
-    // Load saved content for the new type (or empty if none)
     const savedContent = type !== 'none' ? (contentStore.current[type] ?? '') : '';
     const newRawType = type === 'raw' ? rawType : undefined;
     updateCurrentRequest({ body: { type, content: savedContent, rawType: newRawType } });
-    setIsViewMode(false);
-    setCollapsedBlocks(new Set());
   };
 
-  /** Handle content change */
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateCurrentRequest({ body: { ...body, content: e.target.value } });
-  };
+  /** Handle content change from Monaco */
+  const handleEditorChange = useCallback((value: string | undefined) => {
+    updateCurrentRequest({ body: { ...body, content: value || '' } });
+  }, [body, updateCurrentRequest]);
 
-  /** Sync scroll */
-  const handleScroll = () => {
-    if (textareaRef.current && highlightRef.current) {
-      highlightRef.current.scrollTop = textareaRef.current.scrollTop;
-      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
-    }
+  /** Handle raw type change */
+  const handleRawTypeChange = (type: RawContentType) => {
+    setRawType(type);
+    updateCurrentRequest({ body: { ...body, rawType: type } });
   };
 
   /** Format JSON */
-  const formatJson = () => {
+  const formatJson = useCallback(() => {
     if (!body.content.trim()) return;
     try {
       const parsed = JSON.parse(body.content);
       const formatted = JSON.stringify(parsed, null, 2);
       updateCurrentRequest({ body: { ...body, content: formatted } });
-      // 格式化后进入查看模式，支持折叠节点
-      setIsViewMode(true);
-      setCollapsedBlocks(new Set());
+      if (editorRef.current) {
+        editorRef.current.setValue(formatted);
+      }
     } catch {}
-  };
+  }, [body, updateCurrentRequest]);
 
   /** Check if valid JSON */
-  const isValidJson = useMemo(() => {
-    if (!body.content.trim()) return false;
+  const isValidJson = useCallback(() => {
+    if (!body.content.trim()) return true;
     try {
       JSON.parse(body.content);
       return true;
@@ -104,108 +132,20 @@ const BodyEditor: React.FC = () => {
     }
   }, [body.content]);
 
-  /** Toggle block collapse */
-  const toggleBlock = useCallback((id: string) => {
-    setCollapsedBlocks(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
-  }, []);
-
-  /** Expand/Collapse all */
-  const expandAll = useCallback(() => setCollapsedBlocks(new Set()), []);
-  const collapseAll = useCallback(() => {
-    if (!body.content.trim()) return;
-    try {
-      idCounter = 0;
-      const allIds: string[] = [];
-      const collectIds = (data: unknown) => {
-        if (Array.isArray(data) && data.length > 0) {
-          allIds.push(generateId());
-          data.forEach(collectIds);
-        } else if (data && typeof data === 'object') {
-          const keys = Object.keys(data);
-          if (keys.length > 0) {
-            allIds.push(generateId());
-            keys.forEach(k => collectIds((data as Record<string, unknown>)[k]));
-          }
-        }
-      };
-      const parsed = JSON.parse(body.content);
-      collectIds(parsed);
-      setCollapsedBlocks(new Set(allIds));
-    } catch {}
-  }, [body.content]);
-
-  /** Escape HTML */
-  const escapeHtml = (str: string) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-  /** Render JSON with collapse */
-  const renderJson = (data: unknown): string => {
-    const id = generateId();
-    if (data === null) return '<span class="v-null">null</span>';
-    if (typeof data === 'boolean') return `<span class="v-bool">${data}</span>`;
-    if (typeof data === 'number') return `<span class="v-number">${data}</span>`;
-    if (typeof data === 'string') return `<span class="v-string">"${escapeHtml(data)}"</span>`;
-    if (Array.isArray(data)) {
-      if (data.length === 0) return '<span class="v-bracket">[]</span>';
-      const items = data.map((item, i) => {
-        const val = renderJson(item);
-        const comma = i < data.length - 1 ? '<span class="v-comma">,</span>' : '';
-        return `<div class="line">${val}${comma}</div>`;
-      }).join('');
-      const collapsed = collapsedBlocks.has(id);
-      return `<span class="toggle" data-id="${id}">${collapsed ? '▶' : '▼'}</span><span class="v-bracket">[</span><span class="v-count">${data.length}</span><div class="block ${collapsed ? 'hide' : ''}" data-id="${id}">${items}</div><span class="v-bracket">]</span>`;
-    }
-    if (typeof data === 'object') {
-      const keys = Object.keys(data);
-      if (keys.length === 0) return '<span class="v-bracket">{}</span>';
-      const items = keys.map((k, i) => {
-        const val = renderJson(data[k as keyof typeof data]);
-        const comma = i < keys.length - 1 ? '<span class="v-comma">,</span>' : '';
-        return `<div class="line"><span class="v-key">"${escapeHtml(k)}"</span>: ${val}${comma}</div>`;
-      }).join('');
-      const collapsed = collapsedBlocks.has(id);
-      return `<span class="toggle" data-id="${id}">${collapsed ? '▶' : '▼'}</span><span class="v-bracket">{</span><span class="v-count">${keys.length}</span><div class="block ${collapsed ? 'hide' : ''}" data-id="${id}">${items}</div><span class="v-bracket">}</span>`;
-    }
-    return String(data);
-  };
-
-  const renderedJson = useMemo(() => {
-    if (!isValidJson) return '';
-    idCounter = 0;
-    try {
-      const parsed = JSON.parse(body.content);
-      return renderJson(parsed);
-    } catch { return ''; }
-  }, [body.content, isValidJson, collapsedBlocks]);
-
-  const handleViewClick = useCallback((e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.classList.contains('toggle')) {
-      const id = target.getAttribute('data-id');
-      if (id) toggleBlock(id);
-    } else {
-      setIsViewMode(false);
-    }
-  }, [toggleBlock]);
-
-  /** Language for highlighter */
-  const getLanguage = () => {
+  /** Get Monaco language from raw type */
+  const getLanguage = (): string => {
     switch (rawType) {
       case 'json': return 'json';
       case 'xml': return 'xml';
       case 'html': return 'html';
       case 'javascript': return 'javascript';
-      default: return 'text';
+      default: return 'plaintext';
     }
   };
 
   return (
     <div className="body-editor">
-      {/* Type selector - Postman style */}
+      {/* Type selector */}
       <div className="body-type-bar">
         {BODY_TYPES.map((type) => (
           <button
@@ -220,12 +160,10 @@ const BodyEditor: React.FC = () => {
 
       {/* Content area */}
       <div className="body-content-area">
-        {/* None */}
         {body.type === 'none' && (
           <div className="none-hint">This request does not have a body</div>
         )}
 
-        {/* form-data & x-www-form-urlencoded */}
         {(body.type === 'form-data' || body.type === 'x-www-form-urlencoded') && (
           <FormdataEditor
             value={body.content}
@@ -234,79 +172,77 @@ const BodyEditor: React.FC = () => {
           />
         )}
 
-        {/* raw - includes JSON as subtype */}
         {body.type === 'raw' && (
           <>
-            {/* Raw type selector + JSON toolbar */}
             <div className="raw-toolbar">
               <div className="raw-type-selector">
                 {(['json', 'text', 'xml', 'html', 'javascript'] as RawContentType[]).map((t) => (
                   <button
                     key={t}
                     className={`type-btn ${rawType === t ? 'active' : ''}`}
-                    onClick={() => { setRawType(t); setIsViewMode(false); updateCurrentRequest({ body: { ...body, rawType: t } }); }}
+                    onClick={() => handleRawTypeChange(t)}
                   >
                     {t === 'json' ? 'JSON' : t === 'text' ? 'Text' : t === 'xml' ? 'XML' : t === 'html' ? 'HTML' : 'JavaScript'}
                   </button>
                 ))}
               </div>
-              {rawType === 'json' && (
-                <div className="json-actions">
-                  <button className="toolbar-btn" onClick={formatJson}>Beautify</button>
-                  {isViewMode && (
-                    <>
-                      <button className="toolbar-btn" onClick={expandAll}>Expand All</button>
-                      <button className="toolbar-btn" onClick={collapseAll}>Collapse All</button>
-                    </>
-                  )}
-                  {!isValidJson && body.content.trim() && <span className="error-hint">Invalid JSON</span>}
+              <div className="toolbar-right">
+                {/* 字体大小选择器 */}
+                <div className="font-size-selector">
+                  {FONT_SIZE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      className={`font-btn ${fontSize === opt.value ? 'active' : ''}`}
+                      onClick={() => setFontSize(opt.value)}
+                      title={opt.title}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
-              )}
+                {rawType === 'json' && (
+                  <button className="toolbar-btn" onClick={formatJson}>Beautify</button>
+                )}
+                {rawType === 'json' && !isValidJson() && body.content.trim() && (
+                  <span className="error-hint">Invalid JSON</span>
+                )}
+              </div>
             </div>
 
-            {/* JSON view mode with collapse */}
-            {rawType === 'json' && isViewMode && isValidJson ? (
-              <div className="json-view-container" onClick={handleViewClick}>
-                <div className="json-view-content">
-                  <div dangerouslySetInnerHTML={{ __html: renderedJson }} />
-                </div>
-                <div className="json-view-hint">Click to edit</div>
-              </div>
-            ) : (
-              /* Edit mode with syntax highlight */
-              <div className="raw-editor-container">
-                <pre className="raw-highlight-layer" ref={highlightRef}>
-                  <SyntaxHighlighter
-                    language={getLanguage()}
-                    style={vscDarkPlus}
-                    wrapLines={true}
-                    wrapLongLines={true}
-                    customStyle={{
-                      margin: 0,
-                      padding: '0',
-                      fontSize: '13px',
-                      lineHeight: '1.5',
-                      background: 'transparent',
-                      fontFamily: 'JetBrains Mono, Monaco, monospace',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
-                    codeTagProps={{ style: { fontFamily: 'JetBrains Mono, Monaco, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }}
-                  >
-                    {body.content || ' '}
-                  </SyntaxHighlighter>
-                </pre>
-                <textarea
-                  ref={textareaRef}
-                  className="raw-textarea"
-                  placeholder={rawType === 'json' ? 'Enter JSON...' : 'Enter content...'}
-                  value={body.content}
-                  onChange={handleContentChange}
-                  onScroll={handleScroll}
-                  spellCheck={false}
-                />
-              </div>
-            )}
+            {/* Monaco Editor */}
+            <div className="monaco-container">
+              <Editor
+                height="100%"
+                language={getLanguage()}
+                value={body.content}
+                onChange={handleEditorChange}
+                beforeMount={handleEditorWillMount}
+                onMount={handleEditorMount}
+                theme="custom-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize,
+                  fontFamily: "'JetBrains Mono', Monaco, monospace",
+                  lineNumbers: 'on',
+                  folding: true,
+                  foldingStrategy: 'indentation',
+                  foldingHighlight: true,
+                  showFoldingControls: 'always',
+                  unfoldOnClickAfterEndOfLine: true,
+                  automaticLayout: true,
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  padding: { top: 8 },
+                  renderLineHighlight: 'line',
+                  cursorBlinking: 'smooth',
+                  tabSize: 2,
+                  insertSpaces: true,
+                  formatOnPaste: true,
+                  quickSuggestions: rawType === 'json',
+                  suggestOnTriggerCharacters: rawType === 'json',
+                }}
+              />
+            </div>
           </>
         )}
       </div>

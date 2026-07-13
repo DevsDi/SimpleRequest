@@ -142,6 +142,7 @@ export const useStore = create<AppState>((set, get) => ({
         requests: normalizedRequests,
         responses: data.responses || {},
         activeTabId: data.activeTabId,
+        variables: data.variables || [],
       });
     } else {
       // 没有数据，创建默认 Tab
@@ -162,6 +163,7 @@ export const useStore = create<AppState>((set, get) => ({
         requests: { [id]: defaultRequest },
         responses: { [id]: null },
         activeTabId: id,
+        variables: data.variables || [],
       });
     }
   },
@@ -472,18 +474,37 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // 获取当前响应
+  // 获取当前响应（从 localStorage）
   getCurrentResponse: () => {
     const state = get();
     if (!state.activeTabId) return null;
+    // 从 localStorage 读取响应
+    try {
+      const key = `response_${state.activeTabId}`;
+      const data = localStorage.getItem(key);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch {}
     return state.responses[state.activeTabId] || null;
   },
 
-  // 设置当前响应
+  // 设置当前响应（存到 localStorage）
   setCurrentResponse: (response) => {
     const state = get();
     if (!state.activeTabId) return;
 
+    // 保存到 localStorage
+    try {
+      const key = `response_${state.activeTabId}`;
+      if (response) {
+        localStorage.setItem(key, JSON.stringify(response));
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch {}
+
+    // 同时更新内存状态
     set({
       responses: { ...state.responses, [state.activeTabId]: response },
     });
@@ -530,16 +551,21 @@ export const useStore = create<AppState>((set, get) => ({
   clearHistory: () => set({ history: [] }),
 
   // 设置变量
-  setVariables: (variables) => set({ variables }),
+  setVariables: (variables) => {
+    set({ variables });
+    // 同步保存到 chrome.storage.sync
+    chrome.storage.sync.set({ variables });
+  },
 
-  // 获取 Tab 数据（用于保存）
+  // 获取 Tab 数据（用于保存到 local storage，不包含 responses 和 variables）
   getTabsData: () => {
     const state = get();
     return {
       tabs: state.tabs,
       requests: state.requests,
-      responses: state.responses,
+      responses: {}, // responses 存储在 localStorage
       activeTabId: state.activeTabId,
+      variables: [], // variables 存储在 chrome.storage.sync
     };
   },
 

@@ -129,205 +129,54 @@
   color: #f87171;
 }
 
-/** JSON editor container */
-.json-editor-container {
-  position: relative;
-  flex: 1;
-  min-height: 0;
+/** Toolbar right section */
+.toolbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/** Font size selector */
+.font-size-selector {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
   overflow: hidden;
-  background: #1e1e2e;
 }
 
-/** Raw editor container */
-.raw-editor-container {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  background: #1e1e2e;
-}
-
-.json-highlight-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding: 10px;
-  margin: 0;
-  overflow: auto;
-  pointer-events: none;
-  font-size: 13px;
-  font-family: 'JetBrains Mono', 'Monaco', monospace;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  /* 隐藏滚动条，但保持可滚动 */
-  scrollbar-width: none;
-  &::-webkit-scrollbar { display: none; }
-}
-
-.raw-highlight-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding: 10px;
-  margin: 0;
-  overflow: auto;
-  pointer-events: none;
-  font-size: 13px;
-  font-family: 'JetBrains Mono', 'Monaco', monospace;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  /* 隐藏滚动条，但保持可滚动 */
-  scrollbar-width: none;
-  &::-webkit-scrollbar { display: none; }
-}
-
-.json-textarea {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding: 10px;
-  border: none;
-  font-size: 13px;
-  font-family: 'JetBrains Mono', 'Monaco', monospace;
-  line-height: 1.5;
-  resize: none;
+.font-btn {
+  padding: 4px 8px;
   background: transparent;
-  color: transparent;
-  caret-color: #fff;
-  outline: none;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-
-  &::selection { background: rgba(59, 130, 246, 0.5); }
-
-  &::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-  }
-
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
-.raw-textarea {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding: 10px;
   border: none;
-  font-size: 13px;
-  font-family: 'JetBrains Mono', 'Monaco', monospace;
-  line-height: 1.5;
-  resize: none;
-  background: transparent;
-  color: transparent;
-  caret-color: #fff;
-  outline: none;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-
-  &::selection { background: rgba(59, 130, 246, 0.5); }
-
-  &::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-  }
-
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
-/** JSON view container - collapsible */
-.json-view-container {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  background: #1e1e2e;
-  cursor: text;
-  position: relative;
-}
-
-.json-view-content {
-  padding: 10px;
-  font-family: 'JetBrains Mono', 'Monaco', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  overflow: auto;
-  height: 100%;
-  white-space: pre-wrap;
-  word-break: break-word;
-
-  .v-key { color: #9cdcfe; }
-  .v-string { color: #ce9178; }
-  .v-number { color: #b5cea8; }
-  .v-bool { color: #569cd6; }
-  .v-null { color: #569cd6; font-style: italic; }
-  .v-bracket { color: #ffd700; font-weight: bold; }
-  .v-comma { color: var(--text-primary); }
-  .v-count { color: var(--text-muted); font-size: 12px; margin-left: 4px; }
-
-  .toggle {
-    cursor: pointer;
-    font-size: 10px;
-    color: var(--text-muted);
-    margin-right: 4px;
-    user-select: none;
-    &:hover { color: var(--text-primary); }
-  }
-
-  .block {
-    padding-left: 16px;
-    border-left: 1px dashed #444;
-    margin-left: 6px;
-    margin-top: 2px;
-    margin-bottom: 2px;
-    &.hide { display: none; }
-  }
-
-  .line { display: block; }
-}
-
-.json-view-hint {
-  position: absolute;
-  bottom: 4px;
-  right: 8px;
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text-muted);
-  opacity: 0.7;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(.active) {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+  }
+
+  &.active {
+    background: var(--primary-color);
+    color: #fff;
+  }
+}
+
+/** Monaco Editor container */
+.monaco-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #1e1e2e;
+
+  /* Override Monaco default background to match app theme */
+  :global(.monaco-editor),
+  :global(.monaco-editor-background),
+  :global(.monaco-editor .inputarea.ime-input) {
+    background-color: #1e1e2e !important;
+  }
 }

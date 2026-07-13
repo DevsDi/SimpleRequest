@@ -1,21 +1,50 @@
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
+import Editor, { OnMount, BeforeMount, loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import type { editor } from 'monaco-editor';
+import { useEditorFontSize, FONT_SIZE_OPTIONS } from '@/popup/hooks/useEditorFontSize';
 import './JsonViewer.scss';
 
+// 配置 Monaco 使用本地 worker（Chrome 扩展 CSP 兼容）
+(self as any).MonacoEnvironment = {
+  getWorker(_: any, label: string) {
+    if (label === 'json') {
+      return new jsonWorker();
+    }
+    return new editorWorker();
+  },
+};
+
+// 配置 loader 使用本地 monaco，避免从 CDN 加载
+loader.config({ monaco });
+
 /**
- * JSON viewer component with collapse/expand functionality
- * Formats and highlights JSON response
+ * JSON viewer component with Monaco Editor (read-only)
+ * Provides code folding and syntax highlighting
  */
 interface JsonViewerProps {
   /** JSON content string */
   content: string;
 }
 
-/** Generate unique ID */
-let idCounter = 0;
-const generateId = () => `json-block-${idCounter++}`;
-
 const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
-  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const [fontSize, setFontSize] = useEditorFontSize();
+
+  /** Monaco editor mount handler - define custom theme */
+  const handleEditorWillMount: BeforeMount = (monaco) => {
+    monaco.editor.defineTheme('custom-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#1e1e2e',
+        'editor.lineHighlightBackground': '#313244',
+      }
+    });
+  };
 
   /** Parse and format JSON */
   const formattedContent = useMemo(() => {
@@ -39,132 +68,24 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
     }
   }, [content]);
 
-  /** Toggle block collapse */
-  const toggleBlock = useCallback((id: string) => {
-    setCollapsedBlocks((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  }, []);
-
-  /** Expand all */
+  /** Expand all folded regions */
   const expandAll = useCallback(() => {
-    setCollapsedBlocks(new Set());
+    if (editorRef.current) {
+      editorRef.current.getAction('editor.unfoldAll')?.run();
+    }
   }, []);
 
-  /** Collapse all - collect IDs by traversing the parsed JSON structure */
+  /** Collapse all regions */
   const collapseAll = useCallback(() => {
-    if (!content.trim()) return;
-    try {
-      idCounter = 0;
-      const allIds: string[] = [];
-      const collectIds = (data: unknown) => {
-        if (Array.isArray(data)) {
-          if (data.length > 0) {
-            allIds.push(generateId());
-            data.forEach(collectIds);
-          }
-        } else if (data && typeof data === 'object') {
-          const keys = Object.keys(data);
-          if (keys.length > 0) {
-            allIds.push(generateId());
-            keys.forEach(k => collectIds((data as Record<string, unknown>)[k]));
-          }
-        }
-      };
-      const parsed = JSON.parse(content);
-      collectIds(parsed);
-      setCollapsedBlocks(new Set(allIds));
-    } catch {}
-  }, [content]);
+    if (editorRef.current) {
+      editorRef.current.getAction('editor.foldAll')?.run();
+    }
+  }, []);
 
-  /** Escape HTML */
-  const escapeHtml = (str: string): string => {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  /** Editor mount handler */
+  const handleEditorMount: OnMount = (editor) => {
+    editorRef.current = editor;
   };
-
-  /** Render JSON with highlighting and collapse markers */
-  const renderJson = (data: unknown, depth = 0): string => {
-    const id = generateId();
-
-    if (data === null) {
-      return '<span class="v-null">null</span>';
-    }
-
-    if (data === true || data === false) {
-      return `<span class="v-bool">${data}</span>`;
-    }
-
-    if (typeof data === 'number') {
-      return `<span class="v-number">${data}</span>`;
-    }
-
-    if (typeof data === 'string') {
-      return `<span class="v-string">"${escapeHtml(data)}"</span>`;
-    }
-
-    if (Array.isArray(data)) {
-      if (data.length === 0) {
-        return '<span class="v-bracket">[]</span>';
-      }
-      const items = data.map((item, i) => {
-        const val = renderJson(item, depth + 1);
-        const comma = i < data.length - 1 ? '<span class="v-comma">,</span>' : '';
-        return `<div class="line">${val}${comma}</div>`;
-      }).join('');
-      const isCollapsed = collapsedBlocks.has(id);
-      return `<span class="toggle" data-block-id="${id}">${isCollapsed ? '▶' : '▼'}</span><span class="v-bracket">[</span><span class="v-count">${data.length}</span><div class="block ${isCollapsed ? 'hide' : ''}" data-block-id="${id}">${items}</div><span class="v-bracket">]</span>`;
-    }
-
-    if (typeof data === 'object') {
-      const keys = Object.keys(data);
-      if (keys.length === 0) {
-        return '<span class="v-bracket">{}</span>';
-      }
-      const items = keys.map((k, i) => {
-        const val = renderJson(data[k as keyof typeof data], depth + 1);
-        const comma = i < keys.length - 1 ? '<span class="v-comma">,</span>' : '';
-        const keyText = `<span class="v-key">"${escapeHtml(k)}"</span>`;
-        return `<div class="line">${keyText}: ${val}${comma}</div>`;
-      }).join('');
-      const isCollapsed = collapsedBlocks.has(id);
-      return `<span class="toggle" data-block-id="${id}">${isCollapsed ? '▶' : '▼'}</span><span class="v-bracket">{</span><span class="v-count">${keys.length}</span><div class="block ${isCollapsed ? 'hide' : ''}" data-block-id="${id}">${items}</div><span class="v-bracket">}</span>`;
-    }
-
-    return String(data);
-  };
-
-  /** Rendered JSON HTML */
-  const renderedJson = useMemo(() => {
-    if (!isJson || !content.trim()) return '';
-    try {
-      idCounter = 0; // Reset counter for each render
-      const parsed = JSON.parse(content);
-      return renderJson(parsed);
-    } catch {
-      return '';
-    }
-  }, [content, isJson, collapsedBlocks]);
-
-  /** Handle click on toggle */
-  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.classList.contains('toggle')) {
-      const blockId = target.getAttribute('data-block-id');
-      if (blockId) {
-        toggleBlock(blockId);
-      }
-    }
-  }, [toggleBlock]);
 
   if (!content.trim()) {
     return <div className="json-viewer empty">Empty response body</div>;
@@ -180,14 +101,55 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
           <button className="json-action-btn" onClick={collapseAll}>
             Collapse All
           </button>
+          {/* 字体大小选择器 */}
+          <div className="font-size-selector">
+            {FONT_SIZE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className={`font-btn ${fontSize === opt.value ? 'active' : ''}`}
+                onClick={() => setFontSize(opt.value)}
+                title={opt.title}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {isJson ? (
-        <div
-          className="json-content"
-          onClick={handleClick}
-          dangerouslySetInnerHTML={{ __html: renderedJson }}
-        />
+        <div className="monaco-viewer-container">
+          <Editor
+            height="100%"
+            language="json"
+            value={formattedContent}
+            beforeMount={handleEditorWillMount}
+            onMount={handleEditorMount}
+            theme="custom-dark"
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              fontSize,
+              fontFamily: "'JetBrains Mono', Monaco, monospace",
+              lineNumbers: 'on',
+              folding: true,
+              foldingStrategy: 'indentation',
+              foldingHighlight: true,
+              showFoldingControls: 'always',
+              automaticLayout: true,
+              scrollBeyondLastLine: false,
+              wordWrap: 'on',
+              padding: { top: 8 },
+              renderLineHighlight: 'none',
+              scrollbar: {
+                vertical: 'auto',
+                horizontal: 'auto',
+              },
+              overviewRulerLanes: 0,
+              hideCursorInOverviewRuler: true,
+              overviewRulerBorder: false,
+            }}
+          />
+        </div>
       ) : (
         <pre className="raw-content">{content}</pre>
       )}

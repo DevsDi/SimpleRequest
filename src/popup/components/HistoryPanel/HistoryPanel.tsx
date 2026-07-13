@@ -20,16 +20,29 @@ const HistoryPanel: React.FC = () => {
   /** Delete single history entry */
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation(); // Prevent triggering item click
+
+    // 找到要删除的 entry，获取其 tabId
+    const entry = history.find((h) => h.id === id);
+
     removeHistory(id);
     // Also remove from persistent storage
     const updated = history.filter((entry) => entry.id !== id);
     await storageService.setHistory(updated);
+
+    // 如果有关联的 tabId，删除对应的 response
+    if (entry?.tabId) {
+      localStorage.removeItem(`response_${entry.tabId}`);
+    }
   };
 
   /** Clear all history */
   const handleClear = async () => {
     await storageService.clearHistory();
     clearHistory();
+    // 同时清空 localStorage 中所有 response
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('response_'))
+      .forEach(key => localStorage.removeItem(key));
   };
 
   /** Get method color */

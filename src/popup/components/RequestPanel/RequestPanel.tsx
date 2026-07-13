@@ -21,7 +21,7 @@ type RequestTab = 'params' | 'authorization' | 'headers' | 'body';
  * URL input, method selection, headers/body/auth editing
  */
 const RequestPanel: React.FC = () => {
-  const { getCurrentRequest, updateCurrentRequest, isLoading, setLoading, setError, setCurrentResponse, addHistory, variables } = useStore();
+  const { getCurrentRequest, updateCurrentRequest, isLoading, setLoading, setError, setCurrentResponse, addHistory, variables, activeTabId } = useStore();
   const [activeTab, setActiveTab] = useState<RequestTab>('body');
 
   // 变量自动提示状态
@@ -126,12 +126,13 @@ const RequestPanel: React.FC = () => {
       setCurrentResponse(response);
 
       // Save to history (use original request to preserve variable references)
-      await requestService.saveToHistory(currentRequest, response);
+      await requestService.saveToHistory(currentRequest, response, activeTabId || undefined);
       addHistory({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         request: currentRequest,
         response,
         timestamp: Date.now(),
+        tabId: activeTabId || undefined,
       });
     } catch (err: any) {
       setError(err.message || 'Request failed');
