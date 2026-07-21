@@ -38,6 +38,8 @@ const App: React.FC = () => {
   // Sidebar width
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [isDraggingW, setIsDraggingW] = useState(false);
+  // Sidebar collapsed state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // Sidebar active tab
   const [sidebarTab, setSidebarTab] = useState<'history' | 'variables'>('history');
   // Donate modal
@@ -74,6 +76,7 @@ const App: React.FC = () => {
     // Load saved layout settings
     const savedHeight = localStorage.getItem('requestHeight');
     const savedWidth = localStorage.getItem('sidebarWidth');
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed');
     if (savedHeight) {
       const h = parseInt(savedHeight, 10);
       if (!isNaN(h) && h >= 40) {
@@ -85,6 +88,9 @@ const App: React.FC = () => {
       if (!isNaN(w) && w >= 150) {
         setSidebarWidth(w);
       }
+    }
+    if (savedCollapsed === 'true') {
+      setSidebarCollapsed(true);
     }
   }, [initTabs, setHistory]);
 
@@ -162,8 +168,16 @@ const App: React.FC = () => {
 
   /** Vertical drag - sidebar divider */
   const handleWMouseDown = (e: React.MouseEvent) => {
+    if (sidebarCollapsed) return;
     e.preventDefault();
     setIsDraggingW(true);
+  };
+
+  /** Toggle sidebar collapsed state */
+  const toggleSidebar = () => {
+    const newState = !sidebarCollapsed;
+    setSidebarCollapsed(newState);
+    localStorage.setItem('sidebarCollapsed', String(newState));
   };
 
   useEffect(() => {
@@ -210,8 +224,8 @@ const App: React.FC = () => {
       <div className="app-main">
         {/* Left sidebar - history/variables */}
         <aside
-          className="app-sidebar"
-          style={{ width: sidebarWidth, minWidth: sidebarWidth }}
+          className={`app-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}
+          style={{ width: sidebarCollapsed ? 0 : sidebarWidth, minWidth: sidebarCollapsed ? 0 : sidebarWidth }}
         >
           {/* Sidebar tabs */}
           <div className="sidebar-tabs">
@@ -235,11 +249,32 @@ const App: React.FC = () => {
           </div>
         </aside>
 
-        {/* Sidebar divider */}
-        <div
-          className={`resize-handle-v ${isDraggingW ? 'dragging' : ''}`}
-          onMouseDown={handleWMouseDown}
-        />
+        {/* Collapse button (shown when sidebar is open) */}
+        {!sidebarCollapsed && (
+          <button
+            className="sidebar-collapse-btn"
+            onClick={toggleSidebar}
+            title="Collapse sidebar"
+          >
+            ◀
+          </button>
+        )}
+
+        {/* Sidebar divider / expand button */}
+        {sidebarCollapsed ? (
+          <button
+            className="sidebar-expand-btn"
+            onClick={toggleSidebar}
+            title="Expand sidebar"
+          >
+            ▶
+          </button>
+        ) : (
+          <div
+            className={`resize-handle-v ${isDraggingW ? 'dragging' : ''}`}
+            onMouseDown={handleWMouseDown}
+          />
+        )}
 
         {/* Right content - request/response */}
         <main className="app-content">

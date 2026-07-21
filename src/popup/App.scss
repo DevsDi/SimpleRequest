@@ -71,6 +71,17 @@
   background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
+  transition: width 0.2s ease, min-width 0.2s ease;
+  overflow: hidden;
+
+  &.collapsed {
+    min-width: 0;
+    .sidebar-tabs,
+    .sidebar-content {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
 }
 
 /** Sidebar Tabs */
@@ -79,6 +90,8 @@
   padding: 8px;
   gap: 4px;
   border-bottom: 1px solid var(--border-color);
+  align-items: center;
+  position: relative;
 
   .tab-btn {
     flex: 1;
@@ -100,6 +113,22 @@
     &.active {
       background: var(--primary-color);
       color: white;
+    }
+  }
+
+  .sidebar-collapse-btn {
+    padding: 4px 6px;
+    font-size: 10px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
     }
   }
 }
@@ -124,6 +153,46 @@
 
   &:hover, &.dragging {
     background: var(--primary-color);
+  }
+}
+
+/** Sidebar collapse button (shown when sidebar is open) */
+.sidebar-collapse-btn {
+  width: 24px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+}
+
+/** Sidebar expand button (shown when collapsed) */
+.sidebar-expand-btn {
+  width: 24px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
   }
 }
 

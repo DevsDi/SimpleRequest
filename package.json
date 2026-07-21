@@ -1,6 +1,6 @@
 {
   "name": "simple-request",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "轻量级Postman风格Chrome插件",
   "type": "module",
   "scripts": {
