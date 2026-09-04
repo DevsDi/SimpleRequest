@@ -24,5 +24,8 @@ npm-debug.log*
 # Cache
 .cache/
 
+# Tests
+test/
+
 # Chrome extension package
 SimpleRequest-*.zip

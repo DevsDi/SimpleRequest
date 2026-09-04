@@ -441,13 +441,22 @@ class CurlParser {
         value = value.slice(1); // Remove @ prefix
         // Strip one layer of paired wrapping double quotes from the path (e.g. @"/path/file.xlsx", shell quotes are not part of the path)
         value = this.stripPairedQuotes(value);
+        // 【Bug1 修复】先剥离 ;type= 参数段再取 basename：curl -F 文件条目语法 name=@path;type=mime 中
+        // 路径在第一个 ;type= 之前；MIME 值（如 image/png）内的 / 属于 MIME 值本身，不得被当作路径分隔符截断文件名。
+        // 同时提取该 MIME 并保留到序列化输出，仅当缺失时才回落到 application/octet-stream
+        const typeMarkerIndex = value.indexOf(';type=');
+        const path = typeMarkerIndex >= 0 ? value.slice(0, typeMarkerIndex) : value;
+        const mimeType =
+          typeMarkerIndex >= 0
+            ? value.slice(typeMarkerIndex + ';type='.length).split(';')[0]
+            : '';
         // Extract the file name (basename), compatible with both / and \ path separators
-        let fileName = value.split(/[/\\]/).pop() || '';
+        let fileName = path.split(/[/\\]/).pop() || '';
         // Semicolons in the file name would break the downstream file entry format (name=@file;type=...), replace with _
         fileName = fileName.replace(/;/g, '_');
         // Serialize as the downstream FormdataEditor file entry format: name=@filename;type=MIME;base64,
         // (empty base64 means waiting for the user to select a file in the UI to fill in)
-        value = `@${fileName};type=application/octet-stream;base64,`;
+        value = `@${fileName};type=${mimeType || 'application/octet-stream'};base64,`;
       } else {
         // Text field: --form 与 --form-string 规则统一，均剥一层成对包裹双引号（shell 引用不属于值本身）
         value = this.stripPairedQuotes(value);
@@ -588,6 +597,23 @@ class CurlParser {
         }
         // Keep backslash for other cases
         current += char;
+        continue;
+      }
+
+      // 【Bug2 修复】shell 单引号「闭合-转义-重开」模式：...'\''...（curlGenerator.quoteArg 对含撇号的值输出
+      // close-quote + \' + reopen-quote）。当单引号状态读到 ' 且后随 \' 时，把字面撇号追加进 current 并整体
+      // 跳过转义符与其后的重开引号（i += 2），不视为引号结束；否则才按普通结束引号处理
+      // （如 it'\''s 应 tokenize 为 it's，而非错误拆断成 it\s）
+      if (
+        inQuote &&
+        char === "'" &&
+        quoteChar === "'" &&
+        !isAnsiCQuoting &&
+        cmd[i + 1] === '\\' &&
+        cmd[i + 2] === "'"
+      ) {
+        current += "'";
+        i += 2;
         continue;
       }
 
