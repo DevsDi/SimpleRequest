@@ -36,8 +36,10 @@ const serialize = (items: FormDataItem[]): string => {
         return `${i.key}=@${i.fileName || 'file'};type=${mimeType};base64,${i.fileData}`;
       }
       if (i.type === 'file' && i.fileName) {
-        // File selected but not yet loaded (shouldn't happen, but fallback)
-        return `${i.key}=@${i.fileName}`;
+        // 已有 fileName 但 fileData 为空（如 curl 导入的文件占位条目）
+        // 必须携带 ;type= 与 ;base64, 标记，否则再解析时会回落为 Text 条目
+        const mimeType = i.fileType || 'application/octet-stream';
+        return `${i.key}=@${i.fileName};type=${mimeType};base64,`;
       }
       return `${i.key}=${i.value}`;
     })
@@ -75,7 +77,13 @@ const parseFormData = (content: string): FormDataItem[] => {
       }
     }
     const [key, ...valueParts] = line.split('=');
-    return { key: key.trim(), value: valueParts.join('=').trim(), type: 'text' as const, enabled: true, description: '' };
+    let value = valueParts.join('=').trim();
+    // 历史数据兼容：旧版 curlParser 写出的 text 值可能被成对引号包裹（内部引号翻倍），
+    // 这里仅剥除最外层一对引号（长度>=2 且首尾均为 "），不误伤值中间的引号
+    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+      value = value.slice(1, -1);
+    }
+    return { key: key.trim(), value, type: 'text' as const, enabled: true, description: '' };
   });
 };
 
@@ -194,8 +202,14 @@ const FormdataEditor: React.FC<FormdataEditorProps> = ({ value, onChange, type }
                 <div className="file-input">
                   <input
                     type="text"
-                    placeholder="Select file"
-                    value={item.fileName || ''}
+                    placeholder={
+                      item.fileData
+                        ? 'Select file'
+                        : item.fileName
+                          ? `待选择文件: ${item.fileName} — 点击 Browse 选择`
+                          : '待选择文件 — 点击 Browse 选择'
+                    }
+                    value={item.fileData ? (item.fileName || '') : ''}
                     readOnly
                   />
                   <button className="select-file-btn" onClick={() => handleFileSelect(index)}>Browse</button>

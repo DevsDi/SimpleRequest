@@ -158,10 +158,13 @@ class CurlGenerator {
 
     lines.forEach(line => {
       const fileMarkerIdx = line.indexOf('=@');
-      if (fileMarkerIdx > 0) {
+      // 与编辑器/发送端判定保持一致：=@ 之后需含 ;type= 或 ;base64, 才视为文件条目，
+      // 否则文本值中偶然含有 =@ 的普通条目会被误导出为文件
+      const afterMarker = fileMarkerIdx > 0 ? line.slice(fileMarkerIdx + 2) : '';
+      if (fileMarkerIdx > 0 && (afterMarker.includes(';type=') || afterMarker.includes(';base64,'))) {
         // File entry - extract key and filename placeholder
         const key = line.slice(0, fileMarkerIdx).trim();
-        const filePart = line.slice(fileMarkerIdx + 2);
+        const filePart = afterMarker;
         const semicolonIdx = filePart.indexOf(';');
         const fileName = semicolonIdx > 0 ? filePart.slice(0, semicolonIdx) : filePart;
         pairs.push(`${key}=@/path/to/${fileName}  # FILE`);

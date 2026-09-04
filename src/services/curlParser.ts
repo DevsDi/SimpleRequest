@@ -429,33 +429,34 @@ class CurlParser {
    * Parse multipart form data
    */
   private parseFormData(content: string, result: CurlParseResult, isString: boolean): void {
-    // Set Content-Type if not already set
-    const contentTypeHeader = result.headers.find(
-      (h) => h.key.toLowerCase() === 'content-type'
-    );
-    if (!contentTypeHeader) {
-      result.headers.push({
-        key: 'Content-Type',
-        value: 'multipart/form-data',
-        enabled: true,
-      });
-    }
-
     // Parse form field: name=value or name=@filename
     const equalIndex = content.indexOf('=');
     if (equalIndex > 0) {
       const name = content.slice(0, equalIndex);
       let value = content.slice(equalIndex + 1);
 
-      // Handle file upload (@filename)
+      // Handle file upload (@filename, --form-string does not recognize @)
       const isFile = !isString && value.startsWith('@');
       if (isFile) {
         value = value.slice(1); // Remove @ prefix
+        // Strip one layer of paired wrapping double quotes from the path (e.g. @"/path/file.xlsx", shell quotes are not part of the path)
+        value = this.stripPairedQuotes(value);
+        // Extract the file name (basename), compatible with both / and \ path separators
+        let fileName = value.split(/[/\\]/).pop() || '';
+        // Semicolons in the file name would break the downstream file entry format (name=@file;type=...), replace with _
+        fileName = fileName.replace(/;/g, '_');
+        // Serialize as the downstream FormdataEditor file entry format: name=@filename;type=MIME;base64,
+        // (empty base64 means waiting for the user to select a file in the UI to fill in)
+        value = `@${fileName};type=application/octet-stream;base64,`;
+      } else if (!isString) {
+        // Text field: strip one layer of paired wrapping double quotes (shell quotes are not part of the value)
+        value = this.stripPairedQuotes(value);
       }
 
       // Build multipart content (simplified - Postman handles this more sophisticatedly)
+      // --form-string keeps the current status: serialize literally with quotes; --form aligns with the downstream FormdataEditor format (no quotes)
       const formContent = result.body?.content || '';
-      const newField = isFile ? `${name}=@"${value}"` : `${name}="${value}"`;
+      const newField = isString ? `${name}="${value}"` : `${name}=${value}`;
       result.body = {
         type: 'form-data',
         content: formContent ? formContent + '\n' + newField : newField,
@@ -465,6 +466,19 @@ class CurlParser {
     if (result.method === 'GET') {
       result.method = 'POST';
     }
+  }
+
+  /**
+   * Strip one layer of paired wrapping double quotes from a value
+   * Only strips when the value starts with " and ends with " and has length >= 2, quotes inside the value are not affected
+   * @param value Original value
+   * @returns The value with one layer of wrapping double quotes removed
+   */
+  private stripPairedQuotes(value: string): string {
+    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+      return value.slice(1, -1);
+    }
+    return value;
   }
 
   /**

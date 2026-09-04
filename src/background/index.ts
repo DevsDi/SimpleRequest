@@ -129,6 +129,12 @@ function buildHeaders(request: HttpRequestInternal, hasFormDataBody: boolean): R
       headers[key] = h.value;
     });
 
+  // form-data 请求的 Content-Type 必须由 fetch 自动生成（含 boundary），
+  // 手动值（如无 boundary 的 multipart/form-data）会导致服务端无法解析报文，一律剥离
+  if (hasFormDataBody) {
+    delete headers['content-type'];
+  }
+
   // 3. Auto-set default headers (when user hasn't set them)
 
   // Content-Type: auto-set based on body type and rawType
@@ -188,10 +194,14 @@ function parseFormDataContent(content: string): FormData {
 
   for (const line of lines) {
     // Check for file entry: key=@filename;type=mimetype;base64,data
+    // 收紧 file 判定：出现 =@ 且其后内容含 ;type= 或 ;base64, 才按文件条目解析，
+    // 否则文本值中偶然含有 =@（如签名串）会被误判为文件条目
     const eqIdx = line.indexOf('=@');
-    if (eqIdx > 0) {
+    const afterMarker = eqIdx > 0 ? line.slice(eqIdx + 2) : '';
+    const isFileEntry = eqIdx > 0 && (afterMarker.includes(';type=') || afterMarker.includes(';base64,'));
+    if (isFileEntry) {
       const key = line.slice(0, eqIdx).trim();
-      const filePart = line.slice(eqIdx + 2);
+      const filePart = afterMarker;
       const semicolonIdx = filePart.indexOf(';');
       const fileName = semicolonIdx > 0 ? filePart.slice(0, semicolonIdx) : filePart;
 
