@@ -117,12 +117,12 @@ class CurlGenerator {
         break;
 
       case 'form-data':
-        // Multipart form-data - note about files
-        const formDataNote = this.parseFormData(content);
-        if (formDataNote.includes('FILE:')) {
-          parts.push(`# Note: File uploads require manual path adjustment`);
-        }
-        parts.push(`-d ${this.quoteArg(formDataNote)}`);
+        // Multipart form-data - 按条目导出 -F（-d 的语义是 urlencoded/raw body，无法复现 multipart 请求）
+        // 文本条目：-F 'key=value'；文件条目：-F 'key=@/path/to/文件名'（占位路径需手动调整）
+        const formDataEntries = this.parseFormData(content);
+        formDataEntries.forEach(entry => {
+          parts.push(`-F ${this.quoteArg(entry)}`);
+        });
         break;
     }
   }
@@ -150,9 +150,10 @@ class CurlGenerator {
   /**
    * Parse form-data body content
    * Input: key=value or key=@filename;type=mimetype;base64,data
-   * Output: key=value or key=@/path/to/file for curl
+   * Output: 条目数组（每条对应一个 -F 参数）：文本条目为 key=value，
+   *         文件条目为 key=@/path/to/文件名  # FILE（沿用原有占位与注释风格）
    */
-  private parseFormData(content: string): string {
+  private parseFormData(content: string): string[] {
     const lines = content.split('\n').filter(l => l.trim());
     const pairs: string[] = [];
 
@@ -178,7 +179,7 @@ class CurlGenerator {
       }
     });
 
-    return pairs.join('&');
+    return pairs;
   }
 
   /**

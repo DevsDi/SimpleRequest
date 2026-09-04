@@ -448,15 +448,15 @@ class CurlParser {
         // Serialize as the downstream FormdataEditor file entry format: name=@filename;type=MIME;base64,
         // (empty base64 means waiting for the user to select a file in the UI to fill in)
         value = `@${fileName};type=application/octet-stream;base64,`;
-      } else if (!isString) {
-        // Text field: strip one layer of paired wrapping double quotes (shell quotes are not part of the value)
+      } else {
+        // Text field: --form 与 --form-string 规则统一，均剥一层成对包裹双引号（shell 引用不属于值本身）
         value = this.stripPairedQuotes(value);
       }
 
       // Build multipart content (simplified - Postman handles this more sophisticatedly)
-      // --form-string keeps the current status: serialize literally with quotes; --form aligns with the downstream FormdataEditor format (no quotes)
+      // --form 与 --form-string 统一不加引号序列化为 name=value，与下游 FormdataEditor 解析及 background 发送端格式对齐
       const formContent = result.body?.content || '';
-      const newField = isString ? `${name}="${value}"` : `${name}=${value}`;
+      const newField = `${name}=${value}`;
       result.body = {
         type: 'form-data',
         content: formContent ? formContent + '\n' + newField : newField,
