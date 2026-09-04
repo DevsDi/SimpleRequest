@@ -453,6 +453,11 @@ class CurlParser {
         value = this.stripPairedQuotes(value);
       }
 
+      // 【设计说明】curl 官方 --form-string 的语义是字面量发送，双引号本属于值的一部分（真实 curl 会原样发送引号）。
+      // 此处为对齐「三端」（UI 显示、background 实际发送、curl 导出），有意剥除一层成对包裹双引号，
+      // 并统一序列化为 name=value，与下游 FormdataEditor 解析及 background 发送端格式对齐。
+      // 提示后人：若需精确复现原始 curl 的字面语义，此处理与 curl 存在偏差，这是有意取舍而非 bug，请勿改回。
+
       // Build multipart content (simplified - Postman handles this more sophisticatedly)
       // --form 与 --form-string 统一不加引号序列化为 name=value，与下游 FormdataEditor 解析及 background 发送端格式对齐
       const formContent = result.body?.content || '';

@@ -48,6 +48,14 @@ const App: React.FC = () => {
   /** Initialize and load data */
   useEffect(() => {
     const loadData = async () => {
+      // 启动时一次性迁移历史 form-data 数据的成对双引号（迁移失败不阻塞启动），
+      // 保证后续 getHistory()/loadTabsData() 读到的都是归一化数据
+      try {
+        await storageService.migrateLegacyFormDataQuotes();
+      } catch {
+        // 忽略迁移异常，确保启动流程不受影响
+      }
+
       // Load tab data from local storage
       const tabsData = await storageService.loadTabsData();
       if (tabsData) {
