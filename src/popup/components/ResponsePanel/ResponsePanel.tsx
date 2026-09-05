@@ -11,7 +11,7 @@ import './ResponsePanel.scss';
 type ResponseTab = 'body' | 'headers';
 
 /**
- * ResponsePanel 组件 Props
+ * ResponsePanel component Props
  */
 interface ResponsePanelProps {
   response: HttpResponse | null;

@@ -45,10 +45,10 @@ class CurlParser {
   parse(command: string): HttpRequest {
     const result = this.parseCurl(command);
 
-    // 【新增】识别「Content-Type: multipart/form-data（含 boundary）且 body 为原始 multipart 文本」的 curl 命令
-    // （典型来源：Chrome DevTools「Copy as cURL (bash)」会用 --data-raw $'---boundary\r\nContent-Disposition:...'
-    // 复制整段原始 multipart body），将其转换为与 -F / --form-string 一致的标准 form-data 条目格式。
-    // 解析失败（如 body 内无分隔线）则保持原样，不影响既有路径。
+    // [New] Recognize curl commands whose Content-Type is multipart/form-data (with boundary) and whose body is raw multipart text
+    // (typical source: Chrome DevTools "Copy as cURL (bash)" copies the entire raw multipart body as --data-raw $'---boundary\r\nContent-Disposition:...'),
+    // and convert it to the standard form-data entry format consistent with -F / --form-string.
+    // If parsing fails (e.g. the body has no delimiter), keep the body as-is and don't affect existing paths.
     this.convertRawMultipartToFormData(result);
 
     // Apply derived headers from parsed options
@@ -447,9 +447,10 @@ class CurlParser {
         value = value.slice(1); // Remove @ prefix
         // Strip one layer of paired wrapping double quotes from the path (e.g. @"/path/file.xlsx", shell quotes are not part of the path)
         value = this.stripPairedQuotes(value);
-        // 【Bug1 修复】先剥离 ;type= 参数段再取 basename：curl -F 文件条目语法 name=@path;type=mime 中
-        // 路径在第一个 ;type= 之前；MIME 值（如 image/png）内的 / 属于 MIME 值本身，不得被当作路径分隔符截断文件名。
-        // 同时提取该 MIME 并保留到序列化输出，仅当缺失时才回落到 application/octet-stream
+        // [Bug1 fix] Strip the ;type= parameter segment first, then take the basename: in the curl -F file entry syntax name=@path;type=mime,
+        // the path comes before the first ;type=; slashes inside the MIME value (e.g. image/png) belong to the MIME value itself and must not be
+        // treated as path separators, which would truncate the file name. Also extract that MIME and keep it in the serialized output, only
+        // falling back to application/octet-stream when it is missing
         const typeMarkerIndex = value.indexOf(';type=');
         const path = typeMarkerIndex >= 0 ? value.slice(0, typeMarkerIndex) : value;
         const mimeType =
@@ -464,17 +465,19 @@ class CurlParser {
         // (empty base64 means waiting for the user to select a file in the UI to fill in)
         value = `@${fileName};type=${mimeType || 'application/octet-stream'};base64,`;
       } else {
-        // Text field: --form 与 --form-string 规则统一，均剥一层成对包裹双引号（shell 引用不属于值本身）
+        // Text field: --form and --form-string share the same rule; both strip one layer of paired surrounding double quotes (shell quoting is not part of the value)
         value = this.stripPairedQuotes(value);
       }
 
-      // 【设计说明】curl 官方 --form-string 的语义是字面量发送，双引号本属于值的一部分（真实 curl 会原样发送引号）。
-      // 此处为对齐「三端」（UI 显示、background 实际发送、curl 导出），有意剥除一层成对包裹双引号，
-      // 并统一序列化为 name=value，与下游 FormdataEditor 解析及 background 发送端格式对齐。
-      // 提示后人：若需精确复现原始 curl 的字面语义，此处理与 curl 存在偏差，这是有意取舍而非 bug，请勿改回。
+      // [Design note] curl's official --form-string semantics is literal sending, and the double quotes are part of the value
+      // (real curl sends the quotes as-is). Here, to align the "three ends" (UI display, background actual send, curl export),
+      // we deliberately strip one layer of paired surrounding double quotes and uniformly serialize as name=value,
+      // aligned with the downstream FormdataEditor parsing and the background send format.
+      // A note for future readers: if you need to reproduce curl's literal semantics exactly, this handling deviates from curl;
+      // that is an intentional trade-off, not a bug - please do not change it back.
 
       // Build multipart content (simplified - Postman handles this more sophisticatedly)
-      // --form 与 --form-string 统一不加引号序列化为 name=value，与下游 FormdataEditor 解析及 background 发送端格式对齐
+      // --form and --form-string are both serialized as name=value without quotes, aligned with the downstream FormdataEditor parsing and the background send format
       const formContent = result.body?.content || '';
       const newField = `${name}=${value}`;
       result.body = {
@@ -502,14 +505,14 @@ class CurlParser {
   }
 
   /**
-   * 【新增】将请求中的「原始 multipart body + multipart/form-data Content-Type 头」转为标准 form-data 条目格式
-   * 说明：即便不做这一步，detectBodyType 也会因 Content-Type 为 multipart/form-data 而把 body.type 置为 'form-data'，
-   * 但 content 仍是 boundary/Content-Disposition 堆叠的原文，FormdataEditor 会把它当一行一条 key=value 解析成垃圾行。
-   * 此处再做一层语义识别：content 确实可按 boundary 切分为有效的 form-data 字段时，才替换为标准条目格式；
-   * 解析失败（找不到分隔线、无 name 等）则返回 null，保持原 body 不动，不影响 -F / --form-string / urlencoded 等既有路径。
+   * [New] Convert a request with a raw multipart body + multipart/form-data Content-Type header into the standard form-data entry format
+   * Note: even without this step, detectBodyType would set body.type to 'form-data' because the Content-Type is multipart/form-data,
+   * but content would still be the raw boundary/Content-Disposition text, which FormdataEditor would parse as one key=value per line, producing garbage rows.
+   * This adds a semantic layer: only when content can actually be split by the boundary into valid form-data fields is it replaced with the standard entry format;
+   * on parse failure (no delimiter found, no name, etc.) it returns null and leaves the body untouched, not affecting existing paths like -F / --form-string / urlencoded.
    */
   private convertRawMultipartToFormData(result: CurlParseResult): void {
-    // 解析后类型须为 form-data（即声明了 multipart/form-data Content-Type），且已有 body
+    // The parsed type must be form-data (i.e. a multipart/form-data Content-Type is declared) and a body must already exist
     if (result.body?.type !== 'form-data' || !result.body.content) return;
 
     const contentTypeHeader = result.headers.find(
@@ -522,16 +525,16 @@ class CurlParser {
 
     const parsed = this.parseMultipartBody(result.body.content, boundary);
     if (parsed) {
-      // 替换为标准格式；Content-Type 头保留不动（发送端对 form-data 会自动剥离手动 Content-Type，与 -F 导入行为一致）
+      // Replace with the standard format; keep the Content-Type header untouched (the send side automatically strips the manual Content-Type for form-data, consistent with -F import behavior)
       result.body = { type: 'form-data', content: parsed };
     }
   }
 
   /**
-   * 【新增】从 Content-Type 头值中提取 boundary 参数值
-   * 支持 boundary=abc 与 boundary="abc" 两种写法，值截断到 ; 或行尾，大小写不敏感
-   * @param contentTypeValue Content-Type 头值，如 multipart/form-data; boundary="----WebKitFormBoundaryXXX"
-   * @returns boundary 值；取不到返回空字符串
+   * [New] Extract the boundary parameter value from a Content-Type header value
+   * Supports both boundary=abc and boundary="abc" forms; the value is truncated at a ; or the end of the line; case-insensitive
+   * @param contentTypeValue Content-Type header value, e.g. multipart/form-data; boundary="----WebKitFormBoundaryXXX"
+   * @returns The boundary value, or an empty string if not found
    */
   private extractBoundary(contentTypeValue: string): string {
     const m = contentTypeValue.match(/boundary=(?:"([^"]*)"|([^;]*))/i);
@@ -540,23 +543,23 @@ class CurlParser {
   }
 
   /**
-   * 【新增】解析原始 multipart body 为标准 form-data 条目字符串（每行一条：key=value 或 key=@filename;type=MIME;base64,）
-   * 算法：
-   * 1. 按分隔线 --boundary 分割；跳过 preamble（首个分隔线之前）与结尾 --boundary-- 的关闭段
-   * 2. 每段用空行（\r\n\r\n 或 \n\n）分隔「头部 与 正文」
-   * 3. 逐行解析头部，识别 Content-Disposition（须含 form-data、name=...，可选 filename=...）与 Content-Type
-   * 4. 有 filename → 文件条目 name=@filename;type=ContentType||'application/octet-stream';base64,
-   *    （base64 数据留空等待 UI 重新选择文件；文件二进制内容不保留，乱码/转义无碍）
-   *    无 filename → 文本条目 name=bodyContent（正文为字面量，不做引号处理）
-   * 兼容 \r\n 与 \n 换行；解析失败（无分隔线、无合法字段名等）返回 null，维持原 raw body 不变
-   * @param body 原始 multipart 正文
-   * @param boundary 从 Content-Type 提取到的 boundary 值（不含前导 --）
-   * @returns 标准 form-data 条目字符串；失败返回 null
+   * [New] Parse a raw multipart body into a standard form-data entry string (one per line: key=value or key=@filename;type=MIME;base64,)
+   * Algorithm:
+   * 1. Split on the --boundary delimiter; skip the preamble (before the first delimiter) and the closing --boundary-- section
+   * 2. Within each section, separate the header block from the body with a blank line (\r\n\r\n or \n\n)
+   * 3. Parse the header lines to identify Content-Disposition (must contain form-data and name=..., optionally filename=...) and Content-Type
+   * 4. With filename -> file entry name=@filename;type=ContentType||'application/octet-stream';base64,
+   *    (base64 data is left empty for the UI to re-select a file; file binary content is not preserved, so garbage/escaping is irrelevant)
+   *    Without filename -> text entry name=bodyContent (the body is a literal, no quote handling)
+   * Handles both \r\n and \n line endings; on parse failure (no delimiter, no valid field name, etc.) returns null and keeps the original raw body
+   * @param body Raw multipart body
+   * @param boundary Boundary value extracted from Content-Type (without the leading --)
+   * @returns Standard form-data entry string, or null on failure
    */
   private parseMultipartBody(body: string, boundary: string): string | null {
     if (!boundary) return null;
     const delimiter = '--' + boundary;
-    // 找不到分隔线说明不是原始 multipart，交给既有逻辑处理
+    // No delimiter found, so this is not raw multipart; hand it to the existing logic
     if (!body.includes(delimiter)) return null;
 
     const sections = body.split(delimiter);
@@ -565,14 +568,14 @@ class CurlParser {
     for (let i = 1; i < sections.length; i++) {
       let section = sections[i];
 
-      // 结尾分隔线 --boundary-- 经 split 后剩余段以 -- 开头，连同其后的 epilogue 一并跳过
+      // After splitting, the remaining section of the closing delimiter --boundary-- starts with --; skip it along with any following epilogue
       if (section.startsWith('--')) continue;
 
-      // 去掉分隔线自带的行尾（--boundary\r\n 的 \r\n）
+      // Strip the line ending that comes with the delimiter (the \r\n after --boundary)
       section = section.replace(/^\r?\n/, '');
       if (!section.trim()) continue;
 
-      // 以空行分隔头部与正文（兼容 \r\n\r\n 与 \n\n）
+      // Separate the header block from the body with a blank line (handles both \r\n\r\n and \n\n)
       let headBlock = section;
       let bodyPart = '';
       const sepIdx = this.findHeaderBodySeparator(section);
@@ -580,11 +583,11 @@ class CurlParser {
         headBlock = section.slice(0, sepIdx);
         const sepLen = section.startsWith('\r\n\r\n', sepIdx) ? 4 : 2;
         bodyPart = section.slice(sepIdx + sepLen);
-        // 去掉正文尾部、下一个分隔线前的 \r\n（MIME 中该换行属于分隔线行尾）
+        // Strip the \r\n at the end of the body, just before the next delimiter (in MIME, that newline belongs to the delimiter line ending)
         bodyPart = bodyPart.replace(/\r?\n$/, '');
       }
 
-      // 逐行解析该段头部
+      // Parse the header block of this section line by line
       let isFormData = false;
       let name = '';
       let filename: string | undefined;
@@ -606,17 +609,17 @@ class CurlParser {
         }
       }
 
-      // 非 form-data 字段或缺字段名：视为无法解析，跳过该段
+      // Not a form-data field or no field name: treat as unparseable and skip this section
       if (!isFormData || !name) continue;
 
       if (filename !== undefined) {
-        // 文件条目：与 -F 导入一致取 basename（兼容 / 与 \），分号替换为 _ 避免破坏下游条目格式；
-        // base64 留空等待 UI 重新选文件填充
+        // File entry: like -F import, take the basename (handles both / and \), and replace semicolons with _ to avoid breaking the downstream entry format;
+        // base64 is left empty for the UI to re-select a file
         const baseName = filename.split(/[/\\]/).pop() || filename;
         const safeName = baseName.replace(/;/g, '_');
         entries.push(`${name}=@${safeName};type=${contentType || 'application/octet-stream'};base64,`);
       } else {
-        // 文本条目：正文即值（字面量，不做引号处理）
+        // Text entry: the body is the value (a literal, no quote handling)
         entries.push(`${name}=${bodyPart}`);
       }
     }
@@ -626,11 +629,11 @@ class CurlParser {
   }
 
   /**
-   * 【新增】从 Content-Disposition 头值中提取指定属性值（如 name / filename）
-   * 兼容带引号与不带引号写法，属性名不区分大小写，=号两侧允许空白
-   * @param headerValue Content-Disposition 头值，如 form-data; name="file"; filename="a.xlsx"
-   * @param attr 属性名（name / filename）
-   * @returns 属性值（已去空白、去成对包裹引号）；找不到返回空字符串
+   * [New] Extract the value of a given attribute (e.g. name / filename) from a Content-Disposition header value
+   * Handles quoted and unquoted forms; attribute names are case-insensitive; whitespace around the = sign is allowed
+   * @param headerValue Content-Disposition header value, e.g. form-data; name="file"; filename="a.xlsx"
+   * @param attr Attribute name (name / filename)
+   * @returns The attribute value (trimmed, with one layer of surrounding quotes removed), or an empty string if not found
    */
   private extractMultipartParam(headerValue: string, attr: string): string {
     const re = new RegExp('(?:^|;)\\s*' + attr + '\\s*=\\s*("([^"]*)"|([^;]*))', 'i');
@@ -641,7 +644,7 @@ class CurlParser {
   }
 
   /**
-   * 【新增】查找 multipart 段中「头部 与 正文」的空行分隔位置（\r\n\r\n 或 \n\n），找不到返回 -1
+   * [New] Find the blank-line separator position between the header block and the body of a multipart section (\r\n\r\n or \n\n), or -1 if not found
    */
   private findHeaderBodySeparator(section: string): number {
     const crlfIdx = section.indexOf('\r\n\r\n');
@@ -754,10 +757,11 @@ class CurlParser {
         continue;
       }
 
-      // 【Bug2 修复】shell 单引号「闭合-转义-重开」模式：...'\''...（curlGenerator.quoteArg 对含撇号的值输出
-      // close-quote + \' + reopen-quote）。当单引号状态读到 ' 且后随 \' 时，把字面撇号追加进 current 并整体
-      // 跳过转义符与其后的重开引号（i += 2），不视为引号结束；否则才按普通结束引号处理
-      // （如 it'\''s 应 tokenize 为 it's，而非错误拆断成 it\s）
+      // [Bug2 fix] Shell single-quote "close-escape-reopen" pattern: ...'\''... (curlGenerator.quoteArg emits
+      // close-quote + \' + reopen-quote for values containing apostrophes). When in single-quote state we read a '
+      // followed by \', append the literal apostrophe to current and skip the escape along with the following reopen
+      // quote (i += 2) rather than treating it as the end of the quote; otherwise handle it as a normal end quote
+      // (e.g. it'\''s should tokenize as it's, not be wrongly split into it\s)
       if (
         inQuote &&
         char === "'" &&

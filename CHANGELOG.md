@@ -5,6 +5,24 @@ All notable changes to SimpleRequest are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-09-05
+
+### Added
+
+- curlParser now parses raw multipart/form-data bodies (Chrome DevTools `--data-raw` + boundary format is auto-converted to form-data fields)
+
+### Fixed
+
+- curl form-data export is now consistent across all three ends (UI display / background send / curl import)
+  - Text values containing curl `-F` magic syntax (leading `@` / `<` / `"`, or any `;`) use `--form-string` for literal delivery
+  - File entry export preserves `;type=MIME`; removed the `# FILE` placeholder suffix
+  - `quoteArg` now uses full single-quote escaping; fixes shell injection and trailing-backslash quote-swallowing
+  - Manual `Content-Type` header is skipped when form-data body is non-empty (let curl `-F` generate the boundary)
+- curlParser import round-trip fidelity fixes
+  - File entry basename no longer truncated by MIME `/`; imported MIME is preserved
+  - Tokenizer now recognizes the `'\''` close-escape-reopen pattern; values with apostrophes no longer distorted on import
+- Legacy form-data data is normalized on startup (strips one layer of wrapping double quotes), with history dedup before write-back
+
 ## [1.0.0] - 2024-06-06
 
 ### Added

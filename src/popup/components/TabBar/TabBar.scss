@@ -1,4 +1,4 @@
-/** TabBar 组件样式 */
+/** TabBar component styles */
 
 .tab-bar {
   display: flex;
@@ -17,7 +17,7 @@
   overflow-x: auto;
   flex: 1;
 
-  /* 隐藏滚动条但保留滚动功能 */
+  /* Hide the scrollbar while keeping scrolling functional */
   &::-webkit-scrollbar {
     display: none;
   }

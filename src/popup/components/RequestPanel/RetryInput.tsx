@@ -10,8 +10,8 @@ interface RetryInputProps {
 }
 
 /**
- * 重试配置组件
- * 用于设置请求失败后的重试次数和间隔
+ * Retry configuration component
+ * Sets the retry count and interval after a request fails
  */
 const RetryInput: React.FC<RetryInputProps> = ({
   retryCount,

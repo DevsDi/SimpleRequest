@@ -1,10 +1,10 @@
 import { HttpRequest, AuthConfig } from '@/types';
 
-/** 已解析的 form-data 导出条目 */
+/** Parsed form-data export entry */
 interface FormDataEntry {
-  /** 条目内容：key=value 或 key=@/path/to/文件名 */
+  /** Entry content: key=value or key=@/path/to/filename */
   entry: string;
-  /** 是否用 --form-string 字面量发送（文本值含 curl -F 魔法语法时为 true） */
+  /** Whether to send as a literal using --form-string (true when the text value contains curl -F magic syntax) */
   useFormString: boolean;
 }
 
@@ -13,7 +13,7 @@ interface FormDataEntry {
  * Converts HttpRequest configuration to a curl command string
  */
 class CurlGenerator {
-  /** 允许携带 body 的 HTTP 方法（与 addBody 的门控一致，头过滤也按此判定：仅方法允许 body 且会真正输出 -F 时才跳过手动 Content-Type） */
+  /** HTTP methods that may carry a body (consistent with addBody's gate; header filtering also uses this: only skip the manual Content-Type when the method allows a body and -F will actually be emitted) */
   private static readonly BODY_ALLOWED_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
   /**
@@ -46,10 +46,11 @@ class CurlGenerator {
         if (!(h.enabled && h.key.trim())) {
           return false;
         }
-        // form-data 的 Content-Type（含 boundary）由 curl -F 自动生成；发送端 buildHeaders 对 form-data 本就
-        // 剥离手动 Content-Type，导出端保持一致，统一忽略手动值。仅在 body 内容非空且 method 属于允许携带
-        // body 的方法（会真正输出 -F）时才跳过，其余情况（内容为空或 GET/HEAD 等方法）仍输出该头，
-        // 与 addBody 的触发条件一致
+        // The Content-Type (including boundary) for form-data is generated automatically by curl -F; the send
+        // side (buildHeaders) already strips the manual Content-Type for form-data, so the export side follows
+        // suit and always ignores the manual value. Skip it only when the body content is non-empty and the
+        // method allows a body (i.e. -F will actually be emitted); otherwise (empty content, or methods like
+        // GET/HEAD) the header is still output, matching addBody's trigger condition
         if (
           request.body?.type === 'form-data' &&
           request.body.content?.trim() &&
@@ -145,11 +146,11 @@ class CurlGenerator {
       }
 
       case 'form-data': {
-        // Multipart form-data - 按条目导出 -F（-d 的语义是 urlencoded/raw body，无法复现 multipart 请求）
-        // 文本条目：-F 'key=value'；文件条目：-F 'key=@/path/to/文件名'（含非空 ;type=MIME；占位路径需手动改为实际文件路径）
-        // 文本值以 @ 开头（上传文件）、< 开头（读文件内容）、含任意 ;（curl -F 会把 ; 之后的片段当部件头解析）
-        // 或以 " 开头（curl -F 会做 quoted-word 解析剥除首尾双引号），均会被 curl -F 误读，
-        // 需改用 --form-string 以字面量发送，与扩展对文本条目原样 append 的发送语义保持一致
+        // Multipart form-data - export each entry as -F (-d has the semantics of a urlencoded/raw body and cannot reproduce a multipart request)
+        // Text entry: -F 'key=value'; file entry: -F 'key=@/path/to/filename' (includes non-empty ;type=MIME; the placeholder path must be changed to the real file path)
+        // Text values starting with @ (upload file), with < (read file content), containing any ; (curl -F parses the segment after ; as part headers),
+        // or starting with " (curl -F does quoted-word parsing, stripping surrounding double quotes) are all misread by curl -F,
+        // so they must be sent as a literal with --form-string instead, matching the extension's send semantics of appending text entries as-is
         const formDataEntries = this.parseFormData(content);
         const formDataOptions = this.getFormDataOptions(content);
         formDataEntries.forEach((entry, index) => {
@@ -184,33 +185,33 @@ class CurlGenerator {
   /**
    * Parse form-data body content
    * Input: key=value or key=@filename;type=mimetype;base64,data
-   * Output: 条目数组（每条对应一个 -F/--form-string 参数）：文本条目为 key=value，
-   *         文件条目为 key=@/path/to/文件名（含非空 ;type=MIME；占位路径需手动改为实际文件路径）
+   * Output: array of entries (each corresponds to a -F/--form-string argument): text entries are key=value,
+   *         file entries are key=@/path/to/filename (includes non-empty ;type=MIME; the placeholder path must be changed to the real file path)
    */
   private parseFormData(content: string): string[] {
     return this.buildFormDataEntries(content).map(item => item.entry);
   }
 
   /**
-   * 解析一行 form-data 内容为导出条目
-   * Input: key=value 或 key=@filename;type=mimetype;base64,data
-   * Output: 分类结果：文本条目 entry=key=value；文件条目 entry=key=@/path/to/文件名（含非空 ;type=MIME；
-   *         占位路径需手动改为实际文件路径）；无法解析出 key 的行返回 null（与 parseFormData 的跳过规则保持一致）
+   * Parse one line of form-data content into an export entry
+   * Input: key=value or key=@filename;type=mimetype;base64,data
+   * Output: classification result: text entries are entry=key=value; file entries are entry=key=@/path/to/filename (includes non-empty ;type=MIME;
+   *         the placeholder path must be changed to the real file path); lines with no parseable key return null (consistent with parseFormData's skip rule)
    */
   private classifyFormDataLine(line: string): FormDataEntry | null {
     const fileMarkerIdx = line.indexOf('=@');
-    // 与编辑器/发送端判定保持一致：=@ 之后需含 ;type= 或 ;base64, 才视为文件条目，
-    // 否则文本值中偶然含有 =@ 的普通条目会被误导出为文件
+    // Consistent with the editor/send-side detection: only when ;type= or ;base64, follows =@ is it treated as a file entry,
+    // otherwise an ordinary text entry whose value happens to contain =@ would be wrongly exported as a file
     const afterMarker = fileMarkerIdx > 0 ? line.slice(fileMarkerIdx + 2) : '';
     if (fileMarkerIdx > 0 && (afterMarker.includes(';type=') || afterMarker.includes(';base64,'))) {
-      // File entry - extract key, filename placeholder and optional 非空 MIME
-      // 文件条目始终用 -F（curl 的 =@ 即上传文件语法），不受 --form-string 条件影响
+      // File entry - extract key, filename placeholder and optional non-empty MIME
+      // File entries always use -F (curl's =@ is the file-upload syntax) and are not affected by the --form-string condition
       const key = line.slice(0, fileMarkerIdx).trim();
       const filePart = afterMarker;
       const semicolonIdx = filePart.indexOf(';');
       const fileName = semicolonIdx > 0 ? filePart.slice(0, semicolonIdx) : filePart;
-      // 提取 ;type= 的 MIME（可能为空，如 ;type=;base64, 对应 UI 未选文件占位）；仅当非空时才拼入导出，
-      // 避免输出空的 ;type=
+      // Extract the MIME from ;type= (may be empty, e.g. ;type=;base64, corresponds to the UI placeholder where no file is selected); only append it to the export when non-empty,
+      // to avoid emitting an empty ;type=
       const typeMatch = /;type=([^;]*)/.exec(afterMarker);
       const mimeType = typeMatch ? typeMatch[1].trim() : '';
       const typeSuffix = mimeType ? `;type=${mimeType}` : '';
@@ -223,10 +224,12 @@ class CurlGenerator {
       return null;
     }
     const value = valueParts.join('=').trim();
-    // curl -F 有魔法语法：值以 @ 开头=上传文件、< 开头=读文件内容；值内出现任意 ; 时，; 之后的片段都会被 curl
-    // 当作部件头参数解析（不只是 ;type=/;filename=，如 key=a;b、secret=abc;base64,xyz 的尾部也会被误读）；
-    // 值以双引号开头时，curl 会进入 quoted-word 解析，成对剥除首尾双引号并反转义内部 \" 与 \\，导出的引号会丢失。
-    // 扩展自身对文本条目是字面量发送，因此值内出现 @、<、; 或值以 " 开头的文本值导出必须一律改用 --form-string 保持字面语义
+    // curl -F has magic syntax: a value starting with @ uploads a file, < reads file content; when the value contains any ;,
+    // curl parses everything after the ; as part-header parameters (not just ;type=/;filename= - e.g. the tails of key=a;b and secret=abc;base64,xyz are misread too);
+    // when the value starts with a double quote, curl enters quoted-word parsing, stripping a surrounding pair of double quotes and
+    // unescaping inner \" and \\, so exported quotes get lost.
+    // The extension itself sends text entries literally, so any text value containing @, <, ; or starting with " must be exported
+    // with --form-string to preserve the literal semantics
     const useFormString =
       value.startsWith('@') ||
       value.startsWith('<') ||
@@ -236,7 +239,7 @@ class CurlGenerator {
   }
 
   /**
-   * 逐行解析 form-data 内容，返回导出条目及各自应使用的参数
+   * Parse form-data content line by line, returning the export entries and the argument each should use
    */
   private buildFormDataEntries(content: string): FormDataEntry[] {
     const result: FormDataEntry[] = [];
@@ -249,8 +252,8 @@ class CurlGenerator {
   }
 
   /**
-   * 计算每条 form-data 条目应使用的 curl 参数（-F 或 --form-string）
-   * 与 parseFormData 逐行对应，便于 addBody 导出时逐条选择
+   * Compute the curl argument (-F or --form-string) each form-data entry should use
+   * Corresponds to parseFormData line by line, so addBody can pick per entry when exporting
    */
   private getFormDataOptions(content: string): string[] {
     return this.buildFormDataEntries(content).map(item => (item.useFormString ? '--form-string' : '-F'));
@@ -259,9 +262,9 @@ class CurlGenerator {
   /**
    * Quote argument for shell
    * Uses single quotes for safety (no variable expansion / command substitution).
-   * 统一使用单引号包裹：单引号内 $、反引号、反斜杠、双引号均为字面量，不会被 shell 展开或破坏；
-   * 值中的撇号用 '\'' 闭合拼接转义（close-quote + escaped-quote + reopen-quote），对任意字符均安全，
-   * 包括值末尾的反斜杠（旧的仅转义双引号方案会被尾反斜杠吞掉闭合引号，且 $HOME 会被错误展开）
+   * Always wraps in single quotes: inside single quotes $, backticks, backslashes and double quotes are all literals and are not expanded or broken by the shell;
+   * apostrophes in the value are escaped with the '\'' close-reopen pattern (close-quote + escaped-quote + reopen-quote), which is safe for any character,
+   * including a trailing backslash (the old double-quote-only escaping scheme would let a trailing backslash swallow the closing quote, and $HOME would be wrongly expanded)
    */
   private quoteArg(arg: string): string {
     return `'${arg.replace(/'/g, `'\\''`)}'`;

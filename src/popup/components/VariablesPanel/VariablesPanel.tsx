@@ -5,7 +5,7 @@ import './VariablesPanel.scss';
 
 /**
  * Variables panel component
- * 单一变量管理面板，支持添加、编辑、删除变量
+ * A single variable management panel supporting adding, editing, and deleting variables
  */
 const VariablesPanel: React.FC = () => {
   const { variables, setVariables } = useStore();
@@ -14,7 +14,7 @@ const VariablesPanel: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [newValue, setNewValue] = useState('');
 
-  /** 添加新变量 */
+  /** Add a new variable */
   const handleAddVariable = () => {
     if (!newName.trim()) return;
 
@@ -29,7 +29,7 @@ const VariablesPanel: React.FC = () => {
     setNewValue('');
   };
 
-  /** 删除变量 */
+  /** Delete a variable */
   const handleDeleteVariable = (index: number) => {
     const newVars = variables.filter((_, i) => i !== index);
     setVariables(newVars);
@@ -38,7 +38,7 @@ const VariablesPanel: React.FC = () => {
     }
   };
 
-  /** 切换变量启用状态 */
+  /** Toggle the enabled state of a variable */
   const handleToggleVariable = (index: number) => {
     const newVars = variables.map((v, i) =>
       i === index ? { ...v, enabled: !v.enabled } : v
@@ -46,12 +46,12 @@ const VariablesPanel: React.FC = () => {
     setVariables(newVars);
   };
 
-  /** 开始编辑变量 */
+  /** Start editing a variable */
   const handleEditVariable = (index: number) => {
     setEditingIndex(index);
   };
 
-  /** 保存变量编辑 */
+  /** Save variable edit */
   const handleSaveEdit = (index: number, name: string, value: string) => {
     const newVars = variables.map((v, i) =>
       i === index ? { ...v, name: name.trim(), value } : v
@@ -60,20 +60,20 @@ const VariablesPanel: React.FC = () => {
     setEditingIndex(null);
   };
 
-  /** 取消变量编辑 */
+  /** Cancel variable edit */
   const handleCancelEdit = () => {
     setEditingIndex(null);
   };
 
   return (
     <div className="variables-panel">
-      {/* 标题 */}
+      {/* Title */}
       <div className="panel-header">
         <h3>Variables</h3>
         <span className="count">{variables.length}</span>
       </div>
 
-      {/* 添加新变量 */}
+      {/* Add new variable */}
       <div className="add-variable">
         <input
           type="text"
@@ -96,7 +96,7 @@ const VariablesPanel: React.FC = () => {
         </button>
       </div>
 
-      {/* 变量列表 */}
+      {/* Variable list */}
       <div className="variables-list">
         {variables.length === 0 && (
           <div className="empty-hint">
@@ -111,7 +111,7 @@ const VariablesPanel: React.FC = () => {
             className={`variable-item ${variable.enabled ? 'enabled' : 'disabled'} ${editingIndex === index ? 'editing' : ''}`}
           >
             {editingIndex === index ? (
-              // 编辑模式
+              // Edit mode
               <>
                 <input
                   type="text"
@@ -157,7 +157,7 @@ const VariablesPanel: React.FC = () => {
                 </button>
               </>
             ) : (
-              // 显示模式
+              // Display mode
               <>
                 <input
                   type="checkbox"

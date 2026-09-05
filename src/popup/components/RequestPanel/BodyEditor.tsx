@@ -11,7 +11,7 @@ import { useEditorFontSize, FONT_SIZE_OPTIONS } from '@/popup/hooks/useEditorFon
 import FormdataEditor from './FormdataEditor';
 import './BodyEditor.scss';
 
-// 配置 Monaco 使用本地 worker（Chrome 扩展 CSP 兼容）
+// Configure Monaco to use local workers (Chrome extension CSP compatibility)
 (self as any).MonacoEnvironment = {
   getWorker(_: any, label: string) {
     if (label === 'json') {
@@ -30,7 +30,7 @@ const BodyEditor: React.FC = () => {
   const { getCurrentRequest, updateCurrentRequest } = useStore();
   const currentRequest = getCurrentRequest();
 
-  // 所有 hooks 必须在条件返回之前调用
+  // All hooks must be called before any conditional return
   const [fontSize, setFontSize] = useEditorFontSize();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [rawType, setRawType] = useState<RawContentType>('json');
@@ -45,7 +45,7 @@ const BodyEditor: React.FC = () => {
 
   /** Monaco editor mount handler - define custom theme */
   const handleEditorWillMount: BeforeMount = (monaco) => {
-    // 定义自定义主题，背景色与项目统一
+    // Define a custom theme with a background matching the project
     monaco.editor.defineTheme('custom-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -62,12 +62,12 @@ const BodyEditor: React.FC = () => {
     editorRef.current = editor;
   };
 
-  // 条件返回放在所有 hooks 之后
+  // Conditional return goes after all hooks
   if (!currentRequest) return null;
 
   const { body } = currentRequest;
 
-  // 同步 rawType 与 body.rawType
+  // Keep rawType in sync with body.rawType
   useEffect(() => {
     if (body.rawType && body.rawType !== rawType) {
       setRawType(body.rawType);
@@ -184,7 +184,7 @@ const BodyEditor: React.FC = () => {
                 ))}
               </div>
               <div className="toolbar-right">
-                {/* 字体大小选择器 */}
+                {/* Font size selector */}
                 <div className="font-size-selector">
                   {FONT_SIZE_OPTIONS.map((opt) => (
                     <button

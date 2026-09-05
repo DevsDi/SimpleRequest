@@ -1,20 +1,20 @@
 import { HttpRequest } from '@/types';
 
 /**
- * 归一化 form-data content：剥掉文本条目 value 最外层的一层成对包裹双引号
- * 背景：旧版 curlParser/导入逻辑会把 form-data 文本值序列化为 name="value"（带一层成对双引号），
- * 而无引号 name=value 的文本值不受影响。启动时一次性迁移后，展示/发送/去重/导出三端数据一致。
+ * Normalize form-data content: strip one layer of paired surrounding double quotes from the outer part of a text entry's value
+ * Background: the old curlParser/import logic serialized form-data text values as name="value" (with one layer of paired double quotes),
+ * while unquoted name=value text values were unaffected. After a one-time migration at startup, display/send/dedup/export are all consistent.
  *
- * 规则（逐字对齐 FormdataEditor.parseFormData、curlParser.stripPairedQuotes）：
- * - 文件条目不得改动：判定与新 curlGenerator.classifyFormDataLine 一致，
- *   即 line.indexOf('=@') 下标 > 0 且 '=@' 之后含 ;type= 或 ;base64,
- * - 文本条目：在第一个 '=' 处拆 key/value；value 满足
- *   value.length >= 2 && value.startsWith('"') && value.endsWith('"') 时，
- *   slice(1, -1) 仅剥掉一层成对包裹双引号（内部引号不处理）
- * - 其余保持原样：key 不 trim、value 只剥引号其余不动、无 '=' 的行（含空行）原样保留，
- *   最终用 '\n' 重组；空 content 直接返回原值
- * @param content 原始 form-data content 字符串
- * @returns 归一化后的 content 字符串（无变化时与原字符串全等）
+ * Rules (verbatim-aligned with FormdataEditor.parseFormData and curlParser.stripPairedQuotes):
+ * - File entries must not be changed: the detection matches the new curlGenerator.classifyFormDataLine,
+ *   i.e. line.indexOf('=@') index > 0 and ;type= or ;base64, follows '=@'
+ * - Text entry: split key/value at the first '='; when the value satisfies
+ *   value.length >= 2 && value.startsWith('"') && value.endsWith('"'),
+ *   slice(1, -1) strips only one layer of paired surrounding double quotes (inner quotes are untouched)
+ * - Everything else stays as-is: key is not trimmed, value is only quote-stripped and otherwise untouched, lines without '=' (including blank lines) are kept verbatim,
+ *   and the result is reassembled with '\n'; empty content is returned as-is
+ * @param content The raw form-data content string
+ * @returns The normalized content string (identical to the original when nothing changed)
  */
 export function normalizeFormDataContent(content: string): string {
   if (!content) return content;
@@ -22,20 +22,20 @@ export function normalizeFormDataContent(content: string): string {
   return content
     .split('\n')
     .map((line) => {
-      // 文件条目：=@ 下标 > 0 且其后含 ;type= 或 ;base64, 时视为文件条目，字节不动
+      // File entry: when the =@ index is > 0 and ;type= or ;base64, follows it, treat it as a file entry and leave it byte-for-byte untouched
       const fileMarkerIdx = line.indexOf('=@');
       const afterMarker = fileMarkerIdx > 0 ? line.slice(fileMarkerIdx + 2) : '';
       if (fileMarkerIdx > 0 && (afterMarker.includes(';type=') || afterMarker.includes(';base64,'))) {
         return line;
       }
 
-      // 文本条目：在第一个 '=' 处拆 key/value
+      // Text entry: split key/value at the first '='
       const eqIdx = line.indexOf('=');
       if (eqIdx < 0) return line;
       const key = line.slice(0, eqIdx);
       const value = line.slice(eqIdx + 1);
 
-      // 仅剥掉一层成对包裹双引号（与 FormdataEditor 约 79-85 行、curlParser.stripPairedQuotes 逐字一致）
+      // Strip only one layer of paired surrounding double quotes (verbatim-aligned with FormdataEditor around lines 79-85 and curlParser.stripPairedQuotes)
       if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
         return `${key}=${value.slice(1, -1)}`;
       }
@@ -45,9 +45,9 @@ export function normalizeFormDataContent(content: string): string {
 }
 
 /**
- * 若请求为 form-data，返回 body.content 归一化后的请求副本；否则原样返回原请求对象
- * @param request 请求配置
- * @returns 归一化后的请求（无变化时返回原对象引用）
+ * If the request is form-data, return a copy of the request with body.content normalized; otherwise return the original request object
+ * @param request The request configuration
+ * @returns The normalized request (returns the original object reference when nothing changed)
  */
 export function normalizeRequestContent(request: HttpRequest): HttpRequest {
   if (request.body?.type === 'form-data') {

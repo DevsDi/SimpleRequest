@@ -8,17 +8,17 @@ interface TimeoutInputProps {
 }
 
 /**
- * 超时时间输入组件
- * 支持预设选项和自定义输入
+ * Timeout input component
+ * Supports preset options and custom input
  */
 const TimeoutInput: React.FC<TimeoutInputProps> = ({ value, onChange }) => {
   const [isCustom, setIsCustom] = useState(false);
   const [customValue, setCustomValue] = useState(value.toString());
 
-  // 找到匹配的预设选项
+  // Find the matching preset option
   const presetOption = TIMEOUT_OPTIONS.find(opt => opt.value === value && opt.value !== 0);
 
-  // 当外部 value 变化时同步状态
+  // Sync state when the external value changes
   useEffect(() => {
     const isPreset = TIMEOUT_OPTIONS.some(opt => opt.value === value && opt.value !== 0);
     setIsCustom(!isPreset && value > 0);
@@ -26,7 +26,7 @@ const TimeoutInput: React.FC<TimeoutInputProps> = ({ value, onChange }) => {
   }, [value]);
 
   /**
-   * 处理预设选项选择
+   * Handle preset option selection
    */
   const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedLabel = e.target.value;
@@ -34,7 +34,7 @@ const TimeoutInput: React.FC<TimeoutInputProps> = ({ value, onChange }) => {
 
     if (option) {
       if (option.value === 0) {
-        // 选择 "Custom" 选项
+        // The "Custom" option was selected
         setIsCustom(true);
       } else {
         setIsCustom(false);
@@ -44,7 +44,7 @@ const TimeoutInput: React.FC<TimeoutInputProps> = ({ value, onChange }) => {
   };
 
   /**
-   * 处理自定义输入
+   * Handle custom input
    */
   const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -57,7 +57,7 @@ const TimeoutInput: React.FC<TimeoutInputProps> = ({ value, onChange }) => {
   };
 
   /**
-   * 处理自定义输入失焦，验证范围
+   * Handle custom input blur, validating the range
    */
   const handleCustomBlur = () => {
     const val = parseInt(customValue, 10);
@@ -71,7 +71,7 @@ const TimeoutInput: React.FC<TimeoutInputProps> = ({ value, onChange }) => {
   };
 
   /**
-   * 重置为默认值
+   * Reset to the default value
    */
   const handleReset = () => {
     setIsCustom(false);

@@ -35,7 +35,7 @@
   .retry-delay-input {
     width: 80px;
 
-    /* 隐藏数字输入框的上下箭头 */
+    /* Hide the up/down arrows of the number input */
     &::-webkit-inner-spin-button,
     &::-webkit-outer-spin-button {
       -webkit-appearance: none;

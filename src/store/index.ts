@@ -4,22 +4,22 @@ import { DEFAULT_REQUEST, MAX_TABS } from '@/utils/constants';
 import { normalizeRequest } from '@/utils/requestUtils';
 
 /**
- * 应用状态
+ * Application state
  */
 interface AppState {
-  // 多 Tab 状态
+  // Multi-tab state
   tabs: Tab[];
   requests: Record<string, HttpRequest>;
   responses: Record<string, HttpResponse | null>;
   activeTabId: string | null;
 
-  // 原有状态
+  // Original state
   isLoading: boolean;
   error: string | null;
   history: HistoryEntry[];
   variables: Variable[];
 
-  // Tab 操作
+  // Tab operations
   initTabs: (data: TabsData) => void;
   addTab: (request?: HttpRequest) => void;
   closeTab: (id: string) => void;
@@ -28,17 +28,17 @@ interface AppState {
   closeOtherTabs: (keepId: string) => void;
   closeAllTabs: () => void;
 
-  // Request 操作（针对当前激活 Tab）
+  // Request operations (for the currently active tab)
   getCurrentRequest: () => HttpRequest | null;
   updateCurrentRequest: (partial: Partial<HttpRequest>) => void;
   setCurrentRequest: (request: HttpRequest) => void;
   loadRequestToNewTab: (request: HttpRequest) => void;
 
-  // Response 操作（针对当前激活 Tab）
+  // Response operations (for the currently active tab)
   getCurrentResponse: () => HttpResponse | null;
   setCurrentResponse: (response: HttpResponse | null) => void;
 
-  // 其他状态操作
+  // Other state operations
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setHistory: (history: HistoryEntry[]) => void;
@@ -51,16 +51,16 @@ interface AppState {
 }
 
 /**
- * 生成唯一 ID
+ * Generate a unique ID
  */
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 /**
- * 生成 Tab 名称
- * @param request 请求配置
- * @returns Tab 名称
+ * Generate a tab name
+ * @param request The request configuration
+ * @returns The tab name
  */
 function generateTabName(request: HttpRequest): string {
   const { method, url } = request;
@@ -72,7 +72,7 @@ function generateTabName(request: HttpRequest): string {
       const path = urlObj.pathname + urlObj.search;
       name += ` ${path || '/'}`;
     } catch {
-      // URL 解析失败，使用原始 URL
+      // URL parsing failed; use the raw URL
       const pathStart = url.indexOf('/');
       if (pathStart !== -1) {
         name += ` ${url.slice(pathStart)}`;
@@ -84,7 +84,7 @@ function generateTabName(request: HttpRequest): string {
     name += ' Untitled';
   }
 
-  // 截断到 25 字符
+  // Truncate to 25 characters
   if (name.length > 25) {
     name = name.slice(0, 22) + '...';
   }
@@ -93,7 +93,7 @@ function generateTabName(request: HttpRequest): string {
 }
 
 /**
- * 生成请求唯一键（用于检查是否相同请求）
+ * Generate a unique request key (used to check whether two requests are identical)
  */
 function getRequestKey(request: HttpRequest): string {
   const sortedHeaders = [...request.headers]
@@ -114,25 +114,25 @@ function getRequestKey(request: HttpRequest): string {
 }
 
 /**
- * 全局状态管理
+ * Global state management
  */
 export const useStore = create<AppState>((set, get) => ({
-  // 多 Tab 状态
+  // Multi-tab state
   tabs: [],
   requests: {},
   responses: {},
   activeTabId: null,
 
-  // 原有状态
+  // Original state
   isLoading: false,
   error: null,
   history: [],
   variables: [],
 
-  // 初始化 Tab（从存储加载）
+  // Initialize tabs (loaded from storage)
   initTabs: (data) => {
     if (data.tabs && data.tabs.length > 0) {
-      // 对每个请求应用 normalizeRequest 确保字段完整
+      // Apply normalizeRequest to each request to ensure all fields are present
       const normalizedRequests: Record<string, HttpRequest> = {};
       for (const [id, request] of Object.entries(data.requests)) {
         normalizedRequests[id] = normalizeRequest(request);
@@ -145,7 +145,7 @@ export const useStore = create<AppState>((set, get) => ({
         variables: data.variables || [],
       });
     } else {
-      // 没有数据，创建默认 Tab
+      // No data; create a default tab
       const id = generateId();
       const defaultRequest: HttpRequest = {
         ...DEFAULT_REQUEST,
@@ -168,11 +168,11 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  // 新增 Tab
+  // Add a tab
   addTab: (request) => {
     const state = get();
 
-    // 检查 Tab 数量限制
+    // Check the tab count limit
     if (state.tabs.length >= MAX_TABS) {
       set({ error: `Maximum ${MAX_TABS} tabs allowed. Please close some tabs first.` });
       return;
@@ -181,7 +181,7 @@ export const useStore = create<AppState>((set, get) => ({
     const id = generateId();
     const now = Date.now();
 
-    // 如果提供了请求配置，使用 normalizeRequest 确保字段完整
+    // If a request config is provided, use normalizeRequest to ensure all fields are present
     let newRequest: HttpRequest;
     if (request) {
       newRequest = normalizeRequest({ ...request, id, updatedAt: now });
@@ -215,26 +215,26 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // 关闭 Tab
+  // Close a tab
   closeTab: (id) => {
     const state = get();
 
     const tabIndex = state.tabs.findIndex(t => t.id === id);
     const newTabs = state.tabs.filter(t => t.id !== id);
 
-    // 移除对应的 request 和 response
+    // Remove the corresponding request and response
     const newRequests = { ...state.requests };
     delete newRequests[id];
     const newResponses = { ...state.responses };
     delete newResponses[id];
 
-    // 如果关闭的是当前激活的 Tab，切换到相邻 Tab
+    // If the active tab is closed, switch to an adjacent tab
     let newActiveTabId = state.activeTabId;
     if (state.activeTabId === id) {
       if (newTabs.length === 0) {
         newActiveTabId = null;
       } else {
-        // 优先切换到右侧，否则切换到左侧
+        // Prefer the tab on the right first, otherwise the one on the left
         const newIndex = Math.min(tabIndex, newTabs.length - 1);
         newActiveTabId = newTabs[newIndex]?.id || null;
       }
@@ -250,7 +250,7 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // 切换 Tab
+  // Switch tab
   switchTab: (id) => {
     const state = get();
     if (state.tabs.find(t => t.id === id)) {
@@ -258,28 +258,28 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  // 复制 Tab
+  // Duplicate tab
   duplicateTab: (id) => {
     const state = get();
 
-    // 检查 Tab 数量限制
+    // Check the tab count limit
     if (state.tabs.length >= MAX_TABS) {
       set({ error: `Maximum ${MAX_TABS} tabs allowed. Please close some tabs first.` });
       return;
     }
 
-    // 检查源 Tab 是否存在
+    // Check whether the source tab exists
     const sourceTab = state.tabs.find(t => t.id === id);
     const sourceRequest = state.requests[id];
     if (!sourceTab || !sourceRequest) {
       return;
     }
 
-    // 生成新 ID
+    // Generate a new ID
     const newId = generateId();
     const now = Date.now();
 
-    // 复制请求配置，使用 normalizeRequest 确保字段完整
+    // Copy the request config, using normalizeRequest to ensure all fields are present
     const newRequest = normalizeRequest({
       ...sourceRequest,
       id: newId,
@@ -288,7 +288,7 @@ export const useStore = create<AppState>((set, get) => ({
       updatedAt: now,
     });
 
-    // 新 Tab 名称加 "(Copy)" 后缀
+    // Append the "(Copy)" suffix to the new tab name
     const newTab: Tab = {
       id: newId,
       name: `${sourceTab.name} (Copy)`,
@@ -298,26 +298,26 @@ export const useStore = create<AppState>((set, get) => ({
     set({
       tabs: [...state.tabs, newTab],
       requests: { ...state.requests, [newId]: newRequest },
-      responses: { ...state.responses, [newId]: null }, // 新 Tab 不继承响应
-      activeTabId: newId, // 自动切换到新 Tab
+      responses: { ...state.responses, [newId]: null }, // The new tab does not inherit the response
+      activeTabId: newId, // Automatically switch to the new tab
       error: null,
     });
   },
 
-  // 关闭其他 Tab
+  // Close other tabs
   closeOtherTabs: (keepId) => {
     const state = get();
 
-    // 检查保留的 Tab 是否存在
+    // Check whether the tab to keep exists
     const keepTab = state.tabs.find(t => t.id === keepId);
     if (!keepTab) {
       return;
     }
 
-    // 获取要删除的 Tab ID 列表
+    // Get the list of tab IDs to remove
     const tabIdsToRemove = state.tabs.filter(t => t.id !== keepId).map(t => t.id);
 
-    // 删除其他 Tab 的 request 和 response
+    // Delete the requests and responses of the other tabs
     const newRequests = { ...state.requests };
     const newResponses = { ...state.responses };
     for (const id of tabIdsToRemove) {
@@ -329,12 +329,12 @@ export const useStore = create<AppState>((set, get) => ({
       tabs: [keepTab],
       requests: newRequests,
       responses: newResponses,
-      activeTabId: keepId, // 确保切换到保留的 Tab
+      activeTabId: keepId, // Ensure the kept tab is activated
       error: null,
     });
   },
 
-  // 关闭所有 Tab（关闭后只剩 + 按钮）
+  // Close all tabs (only the "+" button remains afterward)
   closeAllTabs: () => {
     set({
       tabs: [],
@@ -346,14 +346,14 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // 获取当前请求
+  // Get the current request
   getCurrentRequest: () => {
     const state = get();
     if (!state.activeTabId) return null;
     return state.requests[state.activeTabId] || null;
   },
 
-  // 更新当前请求
+  // Update the current request
   updateCurrentRequest: (partial) => {
     const state = get();
     if (!state.activeTabId) return;
@@ -367,7 +367,7 @@ export const useStore = create<AppState>((set, get) => ({
       updatedAt: Date.now(),
     };
 
-    // 更新 Tab 名称
+    // Update the tab name
     const newTabName = generateTabName(updatedRequest);
     const newTabs = state.tabs.map(t =>
       t.id === state.activeTabId ? { ...t, name: newTabName } : t
@@ -379,11 +379,11 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // 设置当前请求（用于 curl 导入、历史记录点击等场景）
+  // Set the current request (used in scenarios like curl import or clicking a history entry)
   setCurrentRequest: (request) => {
     const state = get();
 
-    // 如果没有激活的 Tab，创建一个新 Tab
+    // If there is no active tab, create a new one
     if (!state.activeTabId) {
       const newId = generateId();
       const now = Date.now();
@@ -407,7 +407,7 @@ export const useStore = create<AppState>((set, get) => ({
       return;
     }
 
-    // 使用 normalizeRequest 确保所有字段完整
+    // Use normalizeRequest to ensure all fields are present
     const updatedRequest = normalizeRequest({
       ...request,
       id: state.activeTabId,
@@ -425,12 +425,12 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // 将请求加载到新 Tab（用于历史记录点击，避免覆盖当前 Tab）
-  // 如果已存在相同内容的 Tab，直接切换到该 Tab
+  // Load a request into a new tab (used when clicking a history entry to avoid overwriting the current tab)
+  // If a tab with identical content already exists, switch to it directly
   loadRequestToNewTab: (request) => {
     const state = get();
 
-    // 检查是否已存在相同请求的 Tab
+    // Check whether a tab with an identical request already exists
     const requestKey = getRequestKey(request);
     const existingTab = state.tabs.find(tab => {
       const tabRequest = state.requests[tab.id];
@@ -438,12 +438,12 @@ export const useStore = create<AppState>((set, get) => ({
     });
 
     if (existingTab) {
-      // 已存在相同 Tab，直接切换
+      // A matching tab already exists; switch to it directly
       set({ activeTabId: existingTab.id, error: null });
       return;
     }
 
-    // 检查 Tab 数量限制
+    // Check the tab count limit
     if (state.tabs.length >= MAX_TABS) {
       set({ error: `Maximum ${MAX_TABS} tabs allowed. Please close some tabs first.` });
       return;
@@ -452,7 +452,7 @@ export const useStore = create<AppState>((set, get) => ({
     const newId = generateId();
     const now = Date.now();
 
-    // 使用 normalizeRequest 确保所有字段完整
+    // Use normalizeRequest to ensure all fields are present
     const newRequest = normalizeRequest({
       ...request,
       id: newId,
@@ -474,11 +474,11 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // 获取当前响应（从 localStorage）
+  // Get the current response (from localStorage)
   getCurrentResponse: () => {
     const state = get();
     if (!state.activeTabId) return null;
-    // 从 localStorage 读取响应
+    // Read the response from localStorage
     try {
       const key = `response_${state.activeTabId}`;
       const data = localStorage.getItem(key);
@@ -489,12 +489,12 @@ export const useStore = create<AppState>((set, get) => ({
     return state.responses[state.activeTabId] || null;
   },
 
-  // 设置当前响应（存到 localStorage）
+  // Set the current response (saved to localStorage)
   setCurrentResponse: (response) => {
     const state = get();
     if (!state.activeTabId) return;
 
-    // 保存到 localStorage
+    // Save to localStorage
     try {
       const key = `response_${state.activeTabId}`;
       if (response) {
@@ -504,22 +504,22 @@ export const useStore = create<AppState>((set, get) => ({
       }
     } catch {}
 
-    // 同时更新内存状态
+    // Also update the in-memory state
     set({
       responses: { ...state.responses, [state.activeTabId]: response },
     });
   },
 
-  // 设置加载状态
+  // Set the loading state
   setLoading: (isLoading) => set({ isLoading }),
 
-  // 设置错误
+  // Set the error
   setError: (error) => set({ error }),
 
-  // 设置历史记录
+  // Set the history
   setHistory: (history) => set({ history }),
 
-  // 添加历史记录
+  // Add a history entry
   addHistory: (entry) =>
     set((state) => {
       const requestKey = getRequestKey(entry.request);
@@ -541,35 +541,35 @@ export const useStore = create<AppState>((set, get) => ({
       return { history: newHistory };
     }),
 
-  // 移除历史记录
+  // Remove a history entry
   removeHistory: (id) =>
     set((state) => ({
       history: state.history.filter((entry) => entry.id !== id),
     })),
 
-  // 清空历史记录
+  // Clear the history
   clearHistory: () => set({ history: [] }),
 
-  // 设置变量
+  // Set variables
   setVariables: (variables) => {
     set({ variables });
-    // 同步保存到 chrome.storage.sync
+    // Also save to chrome.storage.sync
     chrome.storage.sync.set({ variables });
   },
 
-  // 获取 Tab 数据（用于保存到 local storage，不包含 responses 和 variables）
+  // Get tab data (for saving to local storage; excludes responses and variables)
   getTabsData: () => {
     const state = get();
     return {
       tabs: state.tabs,
       requests: state.requests,
-      responses: {}, // responses 存储在 localStorage
+      responses: {}, // responses are stored in localStorage
       activeTabId: state.activeTabId,
-      variables: [], // variables 存储在 chrome.storage.sync
+      variables: [], // variables are stored in chrome.storage.sync
     };
   },
 
-  // 重置状态
+  // Reset state
   reset: () => {
     const id = generateId();
     const defaultRequest: HttpRequest = {

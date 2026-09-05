@@ -115,9 +115,9 @@ export interface HttpRequest {
   auth: AuthConfig;
   /** Timeout in milliseconds */
   timeout?: number;
-  /** 重试次数（默认 0，不重试） */
+  /** Retry count (default 0, no retries) */
   retryCount?: number;
-  /** 重试间隔（毫秒，默认 1000） */
+  /** Retry interval in milliseconds (default 1000) */
   retryDelay?: number;
   /** Creation time */
   createdAt: number;
@@ -126,8 +126,8 @@ export interface HttpRequest {
 }
 
 /**
- * 部分请求配置（字段可选）
- * 用于处理从存储加载或迁移的旧数据可能缺失字段的情况
+ * Partial request configuration (all fields optional)
+ * Used when legacy data loaded from storage or migration may be missing fields
  */
 export type PartialHttpRequest = Partial<HttpRequest>;
 
@@ -200,31 +200,31 @@ export interface MessageResponse {
 }
 
 /**
- * Tab 元数据
+ * Tab metadata
  */
 export interface Tab {
-  /** 唯一标识，与 HttpRequest.id 关联 */
+  /** Unique identifier, associated with HttpRequest.id */
   id: string;
-  /** 显示名称（自动生成：method + URL 片段） */
+  /** Display name (auto-generated: method + URL fragment) */
   name: string;
-  /** 创建时间 */
+  /** Creation time */
   createdAt: number;
 }
 
 /**
- * Tabs 数据存储结构
+ * Tab data storage structure
  */
 export interface TabsData {
-  /** Tab 元数据列表 */
+  /** List of tab metadata */
   tabs: Tab[];
-  /** Request 数据映射 (id -> HttpRequest) */
+  /** Request data mapping (id -> HttpRequest) */
   requests: Record<string, HttpRequest>;
-  /** Response 数据映射 (id -> HttpResponse | null) */
+  /** Response data mapping (id -> HttpResponse | null) */
   responses: Record<string, HttpResponse | null>;
-  /** 当前激活的 Tab ID */
+  /** ID of the currently active tab */
   activeTabId: string | null;
-  /** 全局变量列表 */
+  /** List of global variables */
   variables: Variable[];
 }
 
-// === 存储数据结构扩展 ===
+// === Storage data structure extensions ===

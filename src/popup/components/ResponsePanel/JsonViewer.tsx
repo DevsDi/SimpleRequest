@@ -7,7 +7,7 @@ import type { editor } from 'monaco-editor';
 import { useEditorFontSize, FONT_SIZE_OPTIONS } from '@/popup/hooks/useEditorFontSize';
 import './JsonViewer.scss';
 
-// 配置 Monaco 使用本地 worker（Chrome 扩展 CSP 兼容）
+// Configure Monaco to use local workers (Chrome extension CSP-compatible)
 (self as any).MonacoEnvironment = {
   getWorker(_: any, label: string) {
     if (label === 'json') {
@@ -98,7 +98,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ content }) => {
           <button className="json-action-btn" onClick={collapseAll}>
             Collapse All
           </button>
-          {/* 字体大小选择器 */}
+          {/* Font size selector */}
           <div className="font-size-selector">
             {FONT_SIZE_OPTIONS.map((opt) => (
               <button

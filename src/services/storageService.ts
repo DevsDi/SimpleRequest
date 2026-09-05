@@ -67,21 +67,21 @@ class StorageService {
   // ==================== TabsData (local) ====================
 
   /**
-   * 保存 Tab 数据到 local storage
-   * @param data Tab 数据
+   * Save Tab data to local storage
+   * @param data Tab data
    */
   async saveTabsData(data: TabsData): Promise<void> {
-    // 不保存 responses 到 storage，改为 localStorage
+    // Don't save responses to storage; use localStorage instead
     const dataToSave = {
       ...data,
-      responses: {}, // 清空 responses
+      responses: {}, // clear responses
     };
     await chrome.storage.local.set({ tabsData: dataToSave });
   }
 
   /**
-   * 加载 Tab 数据
-   * @returns Tab 数据，如果不存在返回 null
+   * Load Tab data
+   * @returns Tab data, or null if it doesn't exist
    */
   async loadTabsData(): Promise<TabsData | null> {
     const { tabsData } = await chrome.storage.local.get('tabsData');
@@ -90,7 +90,7 @@ class StorageService {
       return tabsData;
     }
 
-    // 尝试迁移旧数据
+    // Try to migrate old data
     const migrated = await this.migrateOldData();
     if (migrated) {
       const { tabsData: newData } = await chrome.storage.local.get('tabsData');
@@ -101,30 +101,30 @@ class StorageService {
   }
 
   /**
-   * 检查并迁移旧版本数据
+   * Check for and migrate old-version data
    */
   async migrateOldData(): Promise<boolean> {
-    // 检查 sync 存储中的旧 variables 和 history
+    // Check for old variables and history in the sync storage
     const { variables: oldVariables, history: oldHistory } = await chrome.storage.sync.get(['variables', 'history']);
-    // 检查 local 存储中的旧数据
+    // Check for old data in the local storage
     const { currentRequest } = await chrome.storage.local.get('currentRequest');
 
-    // 如果没有旧数据，直接返回
+    // If there is no old data, return directly
     if (!currentRequest && !oldVariables && !oldHistory) {
       return false;
     }
 
-    // 检查是否已有 tabs 数据
+    // Check if tabs data already exists
     const { tabsData: existingTabsData } = await chrome.storage.local.get('tabsData');
     if (existingTabsData && existingTabsData.tabs && existingTabsData.tabs.length > 0) {
-      // 已有新数据，清理旧的 local 数据
+      // New data already exists; clean up the old local data
       if (currentRequest) {
         await chrome.storage.local.remove('currentRequest');
       }
       return true;
     }
 
-    // 迁移：将 currentRequest 转为第一个 Tab
+    // Migrate: turn currentRequest into the first Tab
     const id = currentRequest?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const now = Date.now();
 
@@ -149,11 +149,11 @@ class StorageService {
       };
     }
 
-    // 迁移结果一次性归一化：与 migrateLegacyFormDataQuotes 相同语义（仅 form-data 生效、幂等），
-    // pre-tabs 版本升级用户无需二次启动即可去除 form-data 文本值的成对包裹双引号
+    // Normalize the migration result in one pass: same semantics as migrateLegacyFormDataQuotes (only affects form-data, idempotent),
+    // so users upgrading from a pre-tabs version don't need a second launch to remove the paired surrounding double quotes from form-data text values
     request = normalizeRequestContent(request);
 
-    // 生成 Tab 名称
+    // Generate the tab name
     let tabName = request.method || 'GET';
     if (request.url) {
       try {
@@ -185,12 +185,12 @@ class StorageService {
       requests: { [id]: request },
       responses: {},
       activeTabId: id,
-      variables: [], // variables 现在存储在 sync 中
+      variables: [], // variables are now stored in sync
     };
 
     await this.saveTabsData(tabsData);
 
-    // 清理旧的 local 数据
+    // Clean up the old local data
     if (currentRequest) {
       await chrome.storage.local.remove('currentRequest');
     }
@@ -199,19 +199,19 @@ class StorageService {
   }
 
   /**
-   * 迁移历史数据中 form-data 文本条目的成对包裹双引号
-   * 旧版 curlParser/导入逻辑会把 form-data 文本值序列化为 name="value"（带一层成对双引号），
-   * background 发送时原样发送会引号翻倍、且历史去重键（含 body.content）会新旧分裂。
-   * 此方法在启动时一次性把 tabsData.requests 与 history 中的所有 form-data 请求归一化写回，
-   * 幂等：二次执行且数据已归一化时无任何改动，返回 false。
-   * @returns 本次迁移是否发生了写回（未发生改动或失败时返回 false）
+   * Migrate the paired surrounding double quotes on form-data text entries in historical data
+   * The old curlParser/import logic serialized form-data text values as name="value" (with one layer of paired double quotes);
+   * when the background sent them as-is the quotes would double up, and the history dedup key (which includes body.content) would split old and new.
+   * This method normalizes and writes back all form-data requests in tabsData.requests and history in one pass at startup.
+   * Idempotent: running it again when the data is already normalized makes no changes and returns false.
+   * @returns Whether this migration wrote anything back (false when nothing changed or on failure)
    */
   async migrateLegacyFormDataQuotes(): Promise<boolean> {
     try {
       const { tabsData, history } = await chrome.storage.local.get(['tabsData', 'history']);
       let changed = false;
 
-      // tabsData：作用于 requests 映射中每个 form-data 请求的 body.content
+      // tabsData: applies to the body.content of every form-data request in the requests map
       if (tabsData && tabsData.requests && typeof tabsData.requests === 'object') {
         const before = JSON.stringify(tabsData.requests);
         const newRequests: Record<string, HttpRequest> = {};
@@ -228,7 +228,7 @@ class StorageService {
         }
       }
 
-      // history：作用于数组中每项 entry.request
+      // history: applies to every entry.request in the array
       if (Array.isArray(history)) {
         const before = JSON.stringify(history);
         const newHistory = history.map((entry) => {
@@ -240,11 +240,12 @@ class StorageService {
         });
         const after = JSON.stringify(newHistory);
         if (before !== after) {
-          // 归一化会把 form-data 的 name="value" 与 name=value 两种旧形态统一为相同 body.content，
-          // 使历史去重键（含 body.content）相同的条目变成重复，写回前需合并去重：
-          // 只合并本次归一化确实改变过的请求键（不触碰迁移前历史里已存在的重复），
-          // 保留该键首次出现的位置、内容取 timestamp 最新的一条（含其 response）；
-          // 无重复键时保持原顺序。去重键与 store/requestService 的 getRequestKey 语义一致。
+          // Normalization unifies the two old form-data forms name="value" and name=value into the same body.content,
+          // making entries with the same history dedup key (which includes body.content) become duplicates, so they must be
+          // merged and deduplicated before writing back: only merge keys that this normalization actually changed (without
+          // touching duplicates that already existed in the history before migration), keep the first-appearance position of
+          // such a key, and take the entry with the newest timestamp for its content (including its response);
+          // when there are no duplicate keys, the original order is preserved. The dedup key semantics match store/requestService's getRequestKey.
           const historyToWrite = mergeDuplicateHistory(newHistory, history);
           changed = true;
           await chrome.storage.local.set({ history: historyToWrite });
@@ -253,14 +254,14 @@ class StorageService {
 
       return changed;
     } catch (err) {
-      // 迁移失败不抛给上层，仅记录警告，保证启动流程不受影响
-      console.warn('[migrateLegacyFormDataQuotes] form-data 引号迁移失败:', err);
+      // Don't throw migration failures to the caller; just log a warning so the startup flow is unaffected
+      console.warn('[migrateLegacyFormDataQuotes] form-data quote migration failed:', err);
       return false;
     }
   }
 
   /**
-   * 清除 Tab 数据
+   * Clear Tab data
    */
   async clearTabsData(): Promise<void> {
     await chrome.storage.local.remove('tabsData');
@@ -291,7 +292,7 @@ class StorageService {
     try {
       const data: ExportData = JSON.parse(json);
       if (data.history && Array.isArray(data.history)) {
-        // 导入旧版格式 JSON 时对每个 form-data 请求归一化，避免带引号的分裂数据写入历史
+        // Normalize every form-data request when importing old-format JSON, to avoid writing split quoted data into history
         const normalizedHistory = data.history.map((entry) => {
           if (entry && entry.request) {
             const normalized = normalizeRequestContent(entry.request);
@@ -308,11 +309,12 @@ class StorageService {
 }
 
 /**
- * 计算历史去重键，与 store/index.ts 与 requestService.getRequestKey 语义一致：
- * method / url / enabled 排序后的 headers / body.type / body.content / auth.type。
- * 未直接 import store 中的 getRequestKey：该函数未导出，且 store 是 zustand 状态层，
- * 服务层反向依赖状态层会破坏“状态层→服务层”的依赖方向（storageService 被 popup/background 广泛引用），
- * 故在此内联等价实现，覆盖到含 body.content 的最小键即可满足迁移期去重需要。
+ * Compute the history dedup key, semantically consistent with store/index.ts and requestService.getRequestKey:
+ * method / url / headers sorted by enabled / body.type / body.content / auth.type.
+ * The getRequestKey in store is not imported directly: it is not exported, and store is the zustand state layer.
+ * Having the service layer depend back on the state layer would break the "state layer -> service layer" dependency
+ * direction (storageService is widely referenced by popup/background), so an equivalent implementation is inlined here;
+ * a minimal key covering body.content is sufficient for dedup during migration.
  */
 function historyDedupKey(request: HttpRequest): string {
   const sortedHeaders = (request.headers || [])
@@ -331,14 +333,14 @@ function historyDedupKey(request: HttpRequest): string {
 }
 
 /**
- * 合并归一化产生的重复历史条目（供 migrateLegacyFormDataQuotes 写回前调用）：
- * - 仅合并本次归一化确实改变过（body.content 被剥引号）的请求键：这样的重复组是
- *   name="value" 与 name=value 两种旧形态统一后产生的，合并时保留该键首次出现的
- *   位置、内容取 timestamp 最新的一条（含其 response）；
- * - 未受归一化影响的重复组（迁移前历史里已存在）原样保留，不改变顺序；
- * - 无可合并的重复组时返回 newEntries 原引用，保证顺序稳定。
- * @param newEntries 归一化后的历史数组
- * @param oldEntries 归一化前对应的历史数组，用于判断哪些请求被实际改动
+ * Merge duplicate history entries produced by normalization (called before migrateLegacyFormDataQuotes writes back):
+ * - Only merge keys that this normalization actually changed (body.content had quotes stripped): such duplicate groups arise
+ *   when the name="value" and name=value old forms are unified; keep the first-appearance position of that key,
+ *   and take the entry with the newest timestamp for its content (including its response);
+ * - Duplicate groups not affected by normalization (already present in the history before migration) are kept as-is, without changing order;
+ * - When there are no mergeable duplicate groups, return the original newEntries reference, keeping the order stable.
+ * @param newEntries The normalized history array
+ * @param oldEntries The corresponding pre-normalization history array, used to determine which requests were actually changed
  */
 function mergeDuplicateHistory(
   newEntries: HistoryEntry[],
@@ -347,7 +349,7 @@ function mergeDuplicateHistory(
   const keyOf = (entry: HistoryEntry | undefined, idx: number): string =>
     entry && entry.request ? historyDedupKey(entry.request) : `__no_request__${idx}`;
 
-  // 第一遍：统计每个键的条目数、timestamp 最新的一条，并标记被本次归一化改动的键
+  // Pass 1: count the entries per key, track the newest by timestamp, and mark keys changed by this normalization
   const newestByKey = new Map<string, HistoryEntry>();
   const countByKey = new Map<string, number>();
   const changedKeys = new Set<string>();
@@ -356,19 +358,19 @@ function mergeDuplicateHistory(
     const key = keyOf(entry, idx);
     countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
 
-    // 取 timestamp 最新的一条；同值时保留首次出现（更早索引）的内容
+    // Take the entry with the newest timestamp; on ties keep the content of the first occurrence (earlier index)
     const prevNewest = newestByKey.get(key);
     if (!prevNewest || (entry?.timestamp ?? 0) > (prevNewest?.timestamp ?? 0)) {
       newestByKey.set(key, entry);
     }
 
-    // 该位置的请求引用被 normalizeRequestContent 替换，说明本次归一化确实改动了它
+    // The request reference at this position was replaced by normalizeRequestContent, meaning this normalization really changed it
     if (oldEntries[idx]?.request && entry?.request && entry.request !== oldEntries[idx].request) {
       changedKeys.add(key);
     }
   });
 
-  // 仅当存在“被归一化改动且出现重复”的键时才需要合并；否则保持原顺序、原数量
+  // Merge only when a key was changed by normalization AND appears more than once; otherwise keep the original order and count
   let needMerge = false;
   for (const key of changedKeys) {
     if ((countByKey.get(key) ?? 0) > 1) {
@@ -380,7 +382,7 @@ function mergeDuplicateHistory(
     return newEntries;
   }
 
-  // 第二遍：按首次出现顺序输出；被归一化改动且重复的键只输出 timestamp 最新的一条
+  // Pass 2: output in first-appearance order; for keys changed by normalization that are duplicated, only output the newest by timestamp
   const out: HistoryEntry[] = [];
   const collapsed = new Set<string>();
   newEntries.forEach((entry, idx) => {

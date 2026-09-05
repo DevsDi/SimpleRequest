@@ -73,7 +73,7 @@ class RequestService {
     // Get existing history from local storage
     const { history } = await chrome.storage.local.get({ history: [] });
 
-    // 只保存响应元数据，不保存 body
+    // Only save response metadata, not the body
     const responseMeta = {
       status: response.status,
       statusText: response.statusText,
@@ -93,7 +93,7 @@ class RequestService {
         ...history[existingIndex],
         response: responseMeta as any,
         timestamp: Date.now(),
-        tabId, // 更新 tabId
+        tabId, // update tabId
       };
       // Move to front
       const updatedEntry = history.splice(existingIndex, 1)[0];
@@ -110,7 +110,7 @@ class RequestService {
       history.unshift(historyEntry);
     }
 
-    // Limit count (超过50条覆盖最早的) and save to local
+    // Limit count (over 50 overwrites the oldest) and save to local
     const newHistory = history.slice(0, MAX_HISTORY_ITEMS);
     await chrome.storage.local.set({ history: newHistory });
   }

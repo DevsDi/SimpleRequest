@@ -24,39 +24,39 @@ const RequestPanel: React.FC = () => {
   const { getCurrentRequest, updateCurrentRequest, isLoading, setLoading, setError, setCurrentResponse, addHistory, variables, activeTabId } = useStore();
   const [activeTab, setActiveTab] = useState<RequestTab>('body');
 
-  // 变量自动提示状态
+  // Variable autocomplete state
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteFilter, setAutocompleteFilter] = useState('');
   const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
   const urlInputRef = useRef<HTMLInputElement>(null);
 
-  // 获取当前请求
+  // Get the current request
   const currentRequest = getCurrentRequest();
 
   /**
-   * 检测光标位置是否在变量语法内
-   * 返回 {{ 后的文本，如果没有则返回 null
+   * Detect whether the cursor is inside a variable expression
+   * Returns the text after {{, or null if not
    */
   const detectVariableTrigger = useCallback((input: HTMLInputElement): string | null => {
     const value = input.value;
     const cursorPos = input.selectionStart || 0;
 
-    // 查找光标前最近的 {{
+    // Find the nearest {{ before the cursor
     const beforeCursor = value.slice(0, cursorPos);
     const lastBraceIndex = beforeCursor.lastIndexOf('{{');
 
     if (lastBraceIndex === -1) return null;
 
-    // 检查 {{ 后是否有 }}（如果有说明变量已完整，不触发）
+    // Check whether }} exists after {{ (if so, the variable is complete; do not trigger)
     const afterBrace = value.slice(lastBraceIndex + 2);
     const closeBraceIndex = afterBrace.indexOf('}}');
 
-    // 如果 }} 存在且在光标之前，说明变量已完整
+    // If }} exists and comes before the cursor, the variable is complete
     if (closeBraceIndex !== -1 && closeBraceIndex < cursorPos - lastBraceIndex - 2) {
       return null;
     }
 
-    // 返回 {{ 后到光标位置的文本
+    // Return the text after {{ up to the cursor position
     return beforeCursor.slice(lastBraceIndex + 2);
   }, []);
 
@@ -154,14 +154,14 @@ const RequestPanel: React.FC = () => {
   };
 
   /**
-   * 处理 URL 输入框变化
+   * Handle URL input changes
    */
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateCurrentRequest({ url: e.target.value });
   };
 
   /**
-   * 处理 URL 输入框按键和输入事件
+   * Handle URL input key and input events
    */
   const handleUrlInput = (e: React.FormEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
@@ -170,7 +170,7 @@ const RequestPanel: React.FC = () => {
     if (trigger !== null) {
       setAutocompleteFilter(trigger);
 
-      // 计算下拉菜单位置
+      // Calculate the dropdown position
       const rect = input.getBoundingClientRect();
       setAutocompletePosition({
         top: rect.bottom + 4,
@@ -183,7 +183,7 @@ const RequestPanel: React.FC = () => {
   };
 
   /**
-   * 处理变量选择
+   * Handle variable selection
    */
   const handleVariableSelect = (variableName: string) => {
     const input = urlInputRef.current;
@@ -192,13 +192,13 @@ const RequestPanel: React.FC = () => {
     const value = input.value;
     const cursorPos = input.selectionStart || 0;
 
-    // 找到 {{ 的位置
+    // Find the {{ position
     const beforeCursor = value.slice(0, cursorPos);
     const lastBraceIndex = beforeCursor.lastIndexOf('{{');
 
     if (lastBraceIndex === -1) return;
 
-    // 构建新值：保留 {{ 前的部分 + {{variableName}} + 光标后的部分
+    // Build the new value: keep the part before {{ + {{variableName}} + the part after the cursor
     const newValue =
       value.slice(0, lastBraceIndex) +
       `{{${variableName}}}` +
@@ -207,7 +207,7 @@ const RequestPanel: React.FC = () => {
     updateCurrentRequest({ url: newValue });
     setShowAutocomplete(false);
 
-    // 设置光标位置到 }} 之后
+    // Set the cursor position to after }}
     const newCursorPos = lastBraceIndex + variableName.length + 4;
     setTimeout(() => {
       input.setSelectionRange(newCursorPos, newCursorPos);
@@ -216,7 +216,7 @@ const RequestPanel: React.FC = () => {
   };
 
   /**
-   * 关闭自动提示
+   * Close the autocomplete popup
    */
   const handleAutocompleteClose = () => {
     setShowAutocomplete(false);
@@ -245,7 +245,7 @@ const RequestPanel: React.FC = () => {
     }
   };
 
-  // 如果没有当前请求，显示空状态
+  // If there is no current request, show the empty state
   if (!currentRequest) {
     return (
       <div className="request-panel">
@@ -305,7 +305,7 @@ const RequestPanel: React.FC = () => {
         </button>
       </div>
 
-      {/* 变量自动提示 */}
+      {/* Variable autocomplete */}
       {showAutocomplete && (
         <VariableAutocomplete
           variables={variables}

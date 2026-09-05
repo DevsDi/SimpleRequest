@@ -21,7 +21,7 @@ const HeadersEditor: React.FC = () => {
   const lastAddedIndex = useRef<number | null>(null);
   const focusedIndexRef = useRef<number | null>(null);
 
-  // 同步 focusedIndex 到 ref
+  // Keep focusedIndex in sync with the ref
   useEffect(() => {
     focusedIndexRef.current = focusedIndex;
   }, [focusedIndex]);
@@ -38,7 +38,7 @@ const HeadersEditor: React.FC = () => {
     updateCurrentRequest({
       headers: [...currentRequest.headers, newHeader],
     });
-    // 设置焦点和新行的建议列表（延迟执行，等待 DOM 更新）
+    // Set focus and show suggestions for the new row (deferred until the DOM is updated)
     setTimeout(() => {
       if (inputRefs.current[newIndex]) {
         inputRefs.current[newIndex]?.focus();
@@ -90,7 +90,7 @@ const HeadersEditor: React.FC = () => {
 
   /** Handle focus - show suggestions */
   const handleFocus = (index: number, value: string) => {
-    // 使用 requestAnimationFrame 确保在 blur 之后执行
+    // Use requestAnimationFrame to ensure this runs after the blur event
     requestAnimationFrame(() => {
       setFocusedIndex(index);
       if (value.trim()) {

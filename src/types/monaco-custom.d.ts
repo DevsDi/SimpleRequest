@@ -1,4 +1,4 @@
-// Monaco Editor 自定义模块类型声明
+// Monaco Editor custom module type declarations
 declare module 'monaco-editor/esm/vs/editor/edcore.main.js' {
   const _: void;
   export default _;

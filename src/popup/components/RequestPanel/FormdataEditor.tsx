@@ -36,8 +36,8 @@ const serialize = (items: FormDataItem[]): string => {
         return `${i.key}=@${i.fileName || 'file'};type=${mimeType};base64,${i.fileData}`;
       }
       if (i.type === 'file' && i.fileName) {
-        // 已有 fileName 但 fileData 为空（如 curl 导入的文件占位条目）
-        // 必须携带 ;type= 与 ;base64, 标记，否则再解析时会回落为 Text 条目
+        // fileName exists but fileData is empty (e.g. a file placeholder imported from curl)
+        // Must carry the ;type= and ;base64, markers, otherwise it falls back to a Text entry on re-parse
         const mimeType = i.fileType || 'application/octet-stream';
         return `${i.key}=@${i.fileName};type=${mimeType};base64,`;
       }
@@ -78,8 +78,9 @@ const parseFormData = (content: string): FormDataItem[] => {
     }
     const [key, ...valueParts] = line.split('=');
     let value = valueParts.join('=').trim();
-    // 历史数据兼容：旧版 curlParser 写出的 text 值可能被成对引号包裹（内部引号翻倍），
-    // 这里仅剥除最外层一对引号（长度>=2 且首尾均为 "），不误伤值中间的引号
+    // Backward compatibility: text values written by older curlParser versions may be
+    // wrapped in a pair of quotes (inner quotes doubled). Only strip the outermost pair
+    // here (length >= 2 and both ends are "), leaving quotes inside the value untouched.
     if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
       value = value.slice(1, -1);
     }

@@ -1,4 +1,4 @@
-import '@/monaco';  // 初始化 Monaco loader（必须在其他导入之前）
+import '@/monaco';  // Initialize the Monaco loader (must be before other imports)
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';

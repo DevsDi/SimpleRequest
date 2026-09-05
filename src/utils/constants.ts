@@ -7,7 +7,7 @@ import { Header, HttpRequest, AuthConfig } from '@/types';
 /** Maximum history entries (reduced for sync storage limit) */
 export const MAX_HISTORY_ITEMS = 50;
 
-/** Maximum Tab 数量 */
+/** Maximum number of tabs */
 export const MAX_TABS = 20;
 
 /** Maximum single response size 2MB */
@@ -94,16 +94,16 @@ export const DEFAULT_REQUEST: HttpRequest = {
   updatedAt: Date.now(),
 };
 
-/** 超时时间预设选项 */
+/** Timeout preset options */
 export const TIMEOUT_OPTIONS = [
   { label: '30s', value: 30000 },
   { label: '60s', value: 60000 },
   { label: '120s', value: 120000 },
   { label: '300s', value: 300000 },
-  { label: 'Custom', value: 0 },  // 0 表示自定义输入
+  { label: 'Custom', value: 0 },  // 0 means custom input
 ];
 
-/** 重试次数预设选项 */
+/** Retry count preset options */
 export const RETRY_COUNT_OPTIONS = [
   { label: '0', value: 0 },
   { label: '1', value: 1 },
@@ -112,5 +112,5 @@ export const RETRY_COUNT_OPTIONS = [
   { label: '5', value: 5 },
 ];
 
-/** 默认重试间隔 */
+/** Default retry interval */
 export const DEFAULT_RETRY_DELAY = 1000;

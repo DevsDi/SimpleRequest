@@ -54,13 +54,13 @@ class VariableService {
   }
 
   /**
-   * 处理请求中的所有变量（URL、Headers、Body、Auth）
-   * @param request 原始请求
-   * @param variables 变量列表
-   * @returns 替换后的请求（深拷贝）
+   * Process all variables in a request (URL, Headers, Body, Auth)
+   * @param request The original request
+   * @param variables The variable list
+   * @returns The request after replacement (deep copy)
    */
   processRequest(request: HttpRequest, variables: Variable[]): HttpRequest {
-    // 如果没有变量，直接返回深拷贝
+    // If there are no variables, return a deep copy directly
     if (!variables || variables.length === 0) {
       return {
         ...request,
@@ -70,7 +70,7 @@ class VariableService {
       };
     }
 
-    // 深拷贝请求
+    // Deep copy the request
     const processed: HttpRequest = {
       ...request,
       headers: request.headers.map((h) => ({ ...h })),
@@ -78,22 +78,22 @@ class VariableService {
       auth: { ...request.auth },
     };
 
-    // 替换 URL 中的变量
+    // Replace variables in the URL
     processed.url = this.replaceVariables(processed.url, variables);
 
-    // 替换 Headers 中的变量
+    // Replace variables in the Headers
     processed.headers = processed.headers.map((h) => ({
       ...h,
       key: this.replaceVariables(h.key, variables),
       value: this.replaceVariables(h.value, variables),
     }));
 
-    // 替换 Body 中的变量
+    // Replace variables in the Body
     if (processed.body.content) {
       processed.body.content = this.replaceVariables(processed.body.content, variables);
     }
 
-    // 替换 Auth 中的变量
+    // Replace variables in the Auth
     if (processed.auth) {
       if (processed.auth.apiKey) {
         processed.auth.apiKey = { ...processed.auth.apiKey };

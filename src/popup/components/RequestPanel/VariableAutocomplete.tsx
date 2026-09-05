@@ -3,24 +3,24 @@ import { Variable } from '@/types';
 import './VariableAutocomplete.scss';
 
 /**
- * VariableAutocomplete 组件 Props
+ * VariableAutocomplete component props
  */
 interface VariableAutocompleteProps {
-  /** 可用变量列表 */
+  /** Available variables list */
   variables: Variable[];
-  /** 选择变量回调 */
+  /** Variable selection callback */
   onSelect: (variableName: string) => void;
-  /** 关闭回调 */
+  /** Close callback */
   onClose: () => void;
-  /** 过滤文本 */
+  /** Filter text */
   filter: string;
-  /** 下拉菜单位置 */
+  /** Dropdown menu position */
   position: { top: number; left: number };
 }
 
 /**
- * 变量自动提示组件
- * 输入 {{ 时显示变量列表
+ * Variable autocomplete component
+ * Shows the variable list when typing {{
  */
 const VariableAutocomplete: React.FC<VariableAutocompleteProps> = ({
   variables,
@@ -32,22 +32,22 @@ const VariableAutocomplete: React.FC<VariableAutocompleteProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // 过滤已启用的变量
+  // Filter enabled variables
   const enabledVariables = variables.filter(v => v.enabled && v.name.trim());
 
-  // 根据过滤文本筛选变量
+  // Filter variables by the filter text
   const filteredVariables = filter
     ? enabledVariables.filter(v =>
         v.name.toLowerCase().includes(filter.toLowerCase())
       )
     : enabledVariables;
 
-  // 重置选中索引
+  // Reset the selected index
   useEffect(() => {
     setSelectedIndex(0);
   }, [filter]);
 
-  // 滚动到选中项
+  // Scroll the selected item into view
   useEffect(() => {
     if (listRef.current) {
       const selectedItem = listRef.current.querySelector('.selected');
@@ -57,7 +57,7 @@ const VariableAutocomplete: React.FC<VariableAutocompleteProps> = ({
     }
   }, [selectedIndex]);
 
-  // 键盘导航
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -88,7 +88,7 @@ const VariableAutocomplete: React.FC<VariableAutocompleteProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [filteredVariables, selectedIndex, onSelect, onClose]);
 
-  // 点击外部关闭
+  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -144,7 +144,7 @@ const VariableAutocomplete: React.FC<VariableAutocompleteProps> = ({
 };
 
 /**
- * 高亮匹配文本
+ * Highlight the matching text
  */
 function highlightMatch(text: string, filter: string): React.ReactNode {
   if (!filter) return text;

@@ -4,7 +4,7 @@ import ContextMenu, { MenuItem } from '../common/ContextMenu/ContextMenu';
 import './TabBar.scss';
 
 /**
- * TabBar 组件 Props
+ * TabBar component Props
  */
 interface TabBarProps {
   tabs: Tab[];
@@ -13,16 +13,16 @@ interface TabBarProps {
   onAddTab: () => void;
   onCloseTab: (id: string) => void;
   onSwitchTab: (id: string) => void;
-  /** 复制 Tab */
+  /** Duplicate tab */
   onDuplicateTab: (id: string) => void;
-  /** 关闭其他 Tab */
+  /** Close other tabs */
   onCloseOtherTabs: (id: string) => void;
-  /** 关闭所有 Tab */
+  /** Close all tabs */
   onCloseAllTabs: () => void;
 }
 
 /**
- * HTTP 方法对应的颜色类名
+ * Color class names for HTTP methods
  */
 const METHOD_COLORS: Record<string, string> = {
   GET: 'method-get',
@@ -35,8 +35,8 @@ const METHOD_COLORS: Record<string, string> = {
 };
 
 /**
- * TabBar 组件
- * Postman 风格的标签栏，支持右键菜单
+ * TabBar component
+ * Postman-style tab bar with right-click menu support
  */
 const TabBar: React.FC<TabBarProps> = ({
   tabs,
@@ -49,17 +49,17 @@ const TabBar: React.FC<TabBarProps> = ({
   onCloseOtherTabs,
   onCloseAllTabs,
 }) => {
-  // 右键菜单状态
+  // Right-click menu state
   const [contextMenu, setContextMenu] = useState<{
     tabId: string;
     position: { x: number; y: number };
   } | null>(null);
 
   /**
-   * 处理右键菜单事件
+   * Handle right-click menu event
    */
   const handleContextMenu = (e: React.MouseEvent, tabId: string) => {
-    e.preventDefault(); // 阻止默认右键菜单
+    e.preventDefault(); // Prevent the default context menu
     e.stopPropagation();
     setContextMenu({
       tabId,
@@ -68,14 +68,14 @@ const TabBar: React.FC<TabBarProps> = ({
   };
 
   /**
-   * 关闭右键菜单
+   * Close the right-click menu
    */
   const closeContextMenu = () => {
     setContextMenu(null);
   };
 
   /**
-   * 获取右键菜单项配置
+   * Get right-click menu item configuration
    */
   const getContextMenuItems = (tabId: string): MenuItem[] => {
     const isOnlyTab = tabs.length === 1;
@@ -149,7 +149,7 @@ const TabBar: React.FC<TabBarProps> = ({
         </div>
       </div>
 
-      {/* 右键菜单 */}
+      {/* Right-click menu */}
       {contextMenu && (
         <ContextMenu
           items={getContextMenuItems(contextMenu.tabId)}

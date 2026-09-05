@@ -2,50 +2,50 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import './ContextMenu.scss';
 
 /**
- * 菜单项接口定义
+ * Menu item interface definition
  */
 export interface MenuItem {
-  /** 菜单项文本 */
+  /** Menu item text */
   label: string;
-  /** 可选图标 */
+  /** Optional icon */
   icon?: React.ReactNode;
-  /** 点击回调 */
+  /** Click callback */
   onClick: () => void;
-  /** 是否禁用 */
+  /** Whether the item is disabled */
   disabled?: boolean;
-  /** 是否为危险操作（红色样式） */
+  /** Whether it is a dangerous action (red style) */
   danger?: boolean;
 }
 
 /**
- * ContextMenu 组件 Props
+ * ContextMenu component Props
  */
 export interface ContextMenuProps {
-  /** 菜单项列表 */
+  /** List of menu items */
   items: MenuItem[];
-  /** 显示位置 */
+  /** Display position */
   position: { x: number; y: number };
-  /** 关闭回调 */
+  /** Close callback */
   onClose: () => void;
 }
 
 /**
- * 通用右键菜单组件
+ * Generic right-click menu component
  *
- * 功能：
- * - 根据传入位置显示菜单
- * - 自动边界检测，超出视口时调整位置
- * - 支持点击外部、ESC键、点击菜单项关闭
- * - 支持禁用项和危险操作样式
+ * Features:
+ * - Displays the menu at the given position
+ * - Automatically detects boundaries and adjusts the position when it exceeds the viewport
+ * - Supports closing via outside click, Esc key, or clicking a menu item
+ * - Supports disabled items and danger styles
  */
 const ContextMenu: React.FC<ContextMenuProps> = ({ items, position, onClose }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = React.useState(position);
-  // 追踪点击的菜单项索引，用于显示点击效果
+  // Track the clicked menu item index to show the click effect
   const [clickedIndex, setClickedIndex] = React.useState<number | null>(null);
 
   /**
-   * 边界检测：确保菜单不超出视口
+   * Boundary detection: ensure the menu stays within the viewport
    */
   useEffect(() => {
     if (!menuRef.current) return;
@@ -58,17 +58,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, position, onClose }) =
     let newX = position.x;
     let newY = position.y;
 
-    // 检查右边界
+    // Check the right boundary
     if (newX + menuRect.width > viewportWidth) {
-      newX = viewportWidth - menuRect.width - 8; // 留 8px 边距
+      newX = viewportWidth - menuRect.width - 8; // Leave an 8px margin
     }
 
-    // 检查下边界
+    // Check the bottom boundary
     if (newY + menuRect.height > viewportHeight) {
       newY = viewportHeight - menuRect.height - 8;
     }
 
-    // 确保不超出左边界和上边界
+    // Ensure the menu does not exceed the left and top boundaries
     newX = Math.max(8, newX);
     newY = Math.max(8, newY);
 
@@ -76,7 +76,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, position, onClose }) =
   }, [position]);
 
   /**
-   * ESC 键关闭菜单
+   * Close the menu on Esc key
    */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -90,7 +90,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, position, onClose }) =
   }, [onClose]);
 
   /**
-   * 点击外部关闭菜单
+   * Close the menu on outside click
    */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -99,32 +99,32 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, position, onClose }) =
       }
     };
 
-    // 使用 mousedown 而非 click，响应更快
+    // Use mousedown instead of click for faster response
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
   /**
-   * 处理菜单项点击
-   * 使用 onMouseDown 防止 Chrome 扩展 popup 关闭
-   * 延迟关闭让用户能看到点击反馈效果
+   * Handle menu item click
+   * Use onMouseDown to prevent the Chrome extension popup from closing
+   * Delay closing so the user can see the click feedback effect
    */
   const handleItemClick = useCallback((item: MenuItem, index: number) => (e: React.MouseEvent) => {
-    // 阻止事件冒泡
+    // Stop event propagation
     e.stopPropagation();
 
-    // 禁用项不响应点击
+    // Disabled items do not respond to clicks
     if (item.disabled) return;
 
-    // 设置点击状态，显示按下效果
+    // Set the clicked state to show the pressed effect
     setClickedIndex(index);
 
-    // 延迟关闭菜单，让用户看到点击效果（150ms）
+    // Delay closing the menu so the user can see the click effect (150ms)
     setTimeout(() => {
-      // 执行点击回调
+      // Execute the click callback
       item.onClick();
 
-      // 关闭菜单
+      // Close the menu
       onClose();
     }, 150);
   }, [onClose]);

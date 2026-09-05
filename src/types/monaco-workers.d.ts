@@ -1,4 +1,4 @@
-// Monaco Editor worker 类型声明
+// Monaco Editor worker type declarations
 declare module 'monaco-editor/esm/vs/editor/editor.worker?worker' {
   export default class EditorWorker extends Worker {
     constructor();

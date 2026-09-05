@@ -12,7 +12,7 @@ import './HistoryPanel.scss';
 const HistoryPanel: React.FC = () => {
   const { history, loadRequestToNewTab, removeHistory, clearHistory } = useStore();
 
-  /** 点击历史记录项，加载到新 Tab */
+  /** Click a history entry to load it into a new tab */
   const handleItemClick = (entry: HistoryEntry) => {
     loadRequestToNewTab(entry.request);
   };
@@ -21,7 +21,7 @@ const HistoryPanel: React.FC = () => {
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation(); // Prevent triggering item click
 
-    // 找到要删除的 entry，获取其 tabId
+    // Find the entry to delete and get its tabId
     const entry = history.find((h) => h.id === id);
 
     removeHistory(id);
@@ -29,7 +29,7 @@ const HistoryPanel: React.FC = () => {
     const updated = history.filter((entry) => entry.id !== id);
     await storageService.setHistory(updated);
 
-    // 如果有关联的 tabId，删除对应的 response
+    // If there is an associated tabId, remove the matching response
     if (entry?.tabId) {
       localStorage.removeItem(`response_${entry.tabId}`);
     }
@@ -39,7 +39,7 @@ const HistoryPanel: React.FC = () => {
   const handleClear = async () => {
     await storageService.clearHistory();
     clearHistory();
-    // 同时清空 localStorage 中所有 response
+    // Also clear all responses in localStorage
     Object.keys(localStorage)
       .filter(key => key.startsWith('response_'))
       .forEach(key => localStorage.removeItem(key));
