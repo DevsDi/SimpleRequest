@@ -45,6 +45,12 @@ class CurlParser {
   parse(command: string): HttpRequest {
     const result = this.parseCurl(command);
 
+    // 【新增】识别「Content-Type: multipart/form-data（含 boundary）且 body 为原始 multipart 文本」的 curl 命令
+    // （典型来源：Chrome DevTools「Copy as cURL (bash)」会用 --data-raw $'---boundary\r\nContent-Disposition:...'
+    // 复制整段原始 multipart body），将其转换为与 -F / --form-string 一致的标准 form-data 条目格式。
+    // 解析失败（如 body 内无分隔线）则保持原样，不影响既有路径。
+    this.convertRawMultipartToFormData(result);
+
     // Apply derived headers from parsed options
     const derivedHeaders: Header[] = [];
 
@@ -493,6 +499,154 @@ class CurlParser {
       return value.slice(1, -1);
     }
     return value;
+  }
+
+  /**
+   * 【新增】将请求中的「原始 multipart body + multipart/form-data Content-Type 头」转为标准 form-data 条目格式
+   * 说明：即便不做这一步，detectBodyType 也会因 Content-Type 为 multipart/form-data 而把 body.type 置为 'form-data'，
+   * 但 content 仍是 boundary/Content-Disposition 堆叠的原文，FormdataEditor 会把它当一行一条 key=value 解析成垃圾行。
+   * 此处再做一层语义识别：content 确实可按 boundary 切分为有效的 form-data 字段时，才替换为标准条目格式；
+   * 解析失败（找不到分隔线、无 name 等）则返回 null，保持原 body 不动，不影响 -F / --form-string / urlencoded 等既有路径。
+   */
+  private convertRawMultipartToFormData(result: CurlParseResult): void {
+    // 解析后类型须为 form-data（即声明了 multipart/form-data Content-Type），且已有 body
+    if (result.body?.type !== 'form-data' || !result.body.content) return;
+
+    const contentTypeHeader = result.headers.find(
+      (h) => h.key.toLowerCase() === 'content-type'
+    );
+    if (!contentTypeHeader) return;
+
+    const boundary = this.extractBoundary(contentTypeHeader.value);
+    if (!boundary) return;
+
+    const parsed = this.parseMultipartBody(result.body.content, boundary);
+    if (parsed) {
+      // 替换为标准格式；Content-Type 头保留不动（发送端对 form-data 会自动剥离手动 Content-Type，与 -F 导入行为一致）
+      result.body = { type: 'form-data', content: parsed };
+    }
+  }
+
+  /**
+   * 【新增】从 Content-Type 头值中提取 boundary 参数值
+   * 支持 boundary=abc 与 boundary="abc" 两种写法，值截断到 ; 或行尾，大小写不敏感
+   * @param contentTypeValue Content-Type 头值，如 multipart/form-data; boundary="----WebKitFormBoundaryXXX"
+   * @returns boundary 值；取不到返回空字符串
+   */
+  private extractBoundary(contentTypeValue: string): string {
+    const m = contentTypeValue.match(/boundary=(?:"([^"]*)"|([^;]*))/i);
+    if (!m) return '';
+    return (m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : '').trim();
+  }
+
+  /**
+   * 【新增】解析原始 multipart body 为标准 form-data 条目字符串（每行一条：key=value 或 key=@filename;type=MIME;base64,）
+   * 算法：
+   * 1. 按分隔线 --boundary 分割；跳过 preamble（首个分隔线之前）与结尾 --boundary-- 的关闭段
+   * 2. 每段用空行（\r\n\r\n 或 \n\n）分隔「头部 与 正文」
+   * 3. 逐行解析头部，识别 Content-Disposition（须含 form-data、name=...，可选 filename=...）与 Content-Type
+   * 4. 有 filename → 文件条目 name=@filename;type=ContentType||'application/octet-stream';base64,
+   *    （base64 数据留空等待 UI 重新选择文件；文件二进制内容不保留，乱码/转义无碍）
+   *    无 filename → 文本条目 name=bodyContent（正文为字面量，不做引号处理）
+   * 兼容 \r\n 与 \n 换行；解析失败（无分隔线、无合法字段名等）返回 null，维持原 raw body 不变
+   * @param body 原始 multipart 正文
+   * @param boundary 从 Content-Type 提取到的 boundary 值（不含前导 --）
+   * @returns 标准 form-data 条目字符串；失败返回 null
+   */
+  private parseMultipartBody(body: string, boundary: string): string | null {
+    if (!boundary) return null;
+    const delimiter = '--' + boundary;
+    // 找不到分隔线说明不是原始 multipart，交给既有逻辑处理
+    if (!body.includes(delimiter)) return null;
+
+    const sections = body.split(delimiter);
+    const entries: string[] = [];
+
+    for (let i = 1; i < sections.length; i++) {
+      let section = sections[i];
+
+      // 结尾分隔线 --boundary-- 经 split 后剩余段以 -- 开头，连同其后的 epilogue 一并跳过
+      if (section.startsWith('--')) continue;
+
+      // 去掉分隔线自带的行尾（--boundary\r\n 的 \r\n）
+      section = section.replace(/^\r?\n/, '');
+      if (!section.trim()) continue;
+
+      // 以空行分隔头部与正文（兼容 \r\n\r\n 与 \n\n）
+      let headBlock = section;
+      let bodyPart = '';
+      const sepIdx = this.findHeaderBodySeparator(section);
+      if (sepIdx >= 0) {
+        headBlock = section.slice(0, sepIdx);
+        const sepLen = section.startsWith('\r\n\r\n', sepIdx) ? 4 : 2;
+        bodyPart = section.slice(sepIdx + sepLen);
+        // 去掉正文尾部、下一个分隔线前的 \r\n（MIME 中该换行属于分隔线行尾）
+        bodyPart = bodyPart.replace(/\r?\n$/, '');
+      }
+
+      // 逐行解析该段头部
+      let isFormData = false;
+      let name = '';
+      let filename: string | undefined;
+      let contentType = '';
+      for (const line of headBlock.split(/\r?\n/)) {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx <= 0) continue;
+        const headerKey = line.slice(0, colonIdx).trim().toLowerCase();
+        const headerValue = line.slice(colonIdx + 1).trim();
+        if (headerKey === 'content-disposition') {
+          if (!/form-data/i.test(headerValue)) continue;
+          isFormData = true;
+          const n = this.extractMultipartParam(headerValue, 'name');
+          if (n) name = n;
+          const fn = this.extractMultipartParam(headerValue, 'filename');
+          if (fn) filename = fn;
+        } else if (headerKey === 'content-type') {
+          contentType = headerValue;
+        }
+      }
+
+      // 非 form-data 字段或缺字段名：视为无法解析，跳过该段
+      if (!isFormData || !name) continue;
+
+      if (filename !== undefined) {
+        // 文件条目：与 -F 导入一致取 basename（兼容 / 与 \），分号替换为 _ 避免破坏下游条目格式；
+        // base64 留空等待 UI 重新选文件填充
+        const baseName = filename.split(/[/\\]/).pop() || filename;
+        const safeName = baseName.replace(/;/g, '_');
+        entries.push(`${name}=@${safeName};type=${contentType || 'application/octet-stream'};base64,`);
+      } else {
+        // 文本条目：正文即值（字面量，不做引号处理）
+        entries.push(`${name}=${bodyPart}`);
+      }
+    }
+
+    if (entries.length === 0) return null;
+    return entries.join('\n');
+  }
+
+  /**
+   * 【新增】从 Content-Disposition 头值中提取指定属性值（如 name / filename）
+   * 兼容带引号与不带引号写法，属性名不区分大小写，=号两侧允许空白
+   * @param headerValue Content-Disposition 头值，如 form-data; name="file"; filename="a.xlsx"
+   * @param attr 属性名（name / filename）
+   * @returns 属性值（已去空白、去成对包裹引号）；找不到返回空字符串
+   */
+  private extractMultipartParam(headerValue: string, attr: string): string {
+    const re = new RegExp('(?:^|;)\\s*' + attr + '\\s*=\\s*("([^"]*)"|([^;]*))', 'i');
+    const m = headerValue.match(re);
+    if (!m) return '';
+    const val = m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : '';
+    return this.stripPairedQuotes(val.trim());
+  }
+
+  /**
+   * 【新增】查找 multipart 段中「头部 与 正文」的空行分隔位置（\r\n\r\n 或 \n\n），找不到返回 -1
+   */
+  private findHeaderBodySeparator(section: string): number {
+    const crlfIdx = section.indexOf('\r\n\r\n');
+    if (crlfIdx >= 0) return crlfIdx;
+    return section.indexOf('\n\n');
   }
 
   /**
